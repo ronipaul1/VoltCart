@@ -1,0 +1,247 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --ink: #0f172a;
+  --muted: #64748b;
+  --brand: #06b6d4;
+  --brand-dark: #0891b2;
+  --surface: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f8fafc;
+  color: var(--ink);
+}
+
+h1, h2, h3, p { margin: 0; }
+
+button, input, select, textarea { font: inherit; }
+button:disabled { cursor: not-allowed; }
+
+.section {
+  @apply mx-auto max-w-7xl px-4 py-8 md:py-10;
+}
+
+.btn-primary {
+  @apply rounded-md bg-cyan-500 px-5 py-2.5 font-black text-slate-950 shadow-sm transition hover:bg-cyan-400 hover:shadow-md;
+}
+
+.btn-secondary {
+  @apply rounded-md border border-slate-300 bg-white px-5 py-2.5 font-black text-slate-900 transition hover:border-cyan-400 hover:text-cyan-700;
+}
+
+.input-field {
+  @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100;
+}
+
+.product-card {
+  @apply overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm transition hover:border-cyan-300 hover:shadow-md;
+}
+
+.product-card img {
+  transition: transform 280ms ease;
+}
+
+.product-card:hover img {
+  transform: scale(1.04);
+}
+
+.icon-btn {
+  @apply relative grid h-9 min-w-9 place-items-center rounded-lg border border-slate-200 bg-white px-2 text-sm font-black text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700;
+}
+
+.icon-btn span {
+  @apply absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-cyan-500 px-1 text-[10px] font-black text-slate-950;
+}
+
+.menu-link {
+  @apply block rounded-md px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100;
+}
+
+.nav-action {
+  @apply flex h-11 items-center gap-2 rounded-md px-2 text-left text-xs text-slate-500 transition hover:bg-slate-100 hover:text-slate-950;
+}
+
+.nav-action strong,
+.nav-action span span {
+  @apply block leading-tight;
+}
+
+.nav-action strong {
+  @apply text-sm font-black text-slate-950;
+}
+
+.category-tile {
+  @apply overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm transition hover:border-cyan-400 hover:shadow-md;
+}
+
+.promo-tile {
+  @apply block rounded-md border border-slate-200 bg-white p-5 shadow-sm transition hover:border-cyan-400 hover:shadow-md;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #e2e8f0; }
+::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; }
+
+/* ── Account Section ─────────────────────────────────── */
+
+.acct-nav-link {
+  @apply flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900;
+}
+
+.acct-nav-link.active {
+  @apply border-l-2 border-cyan-500 bg-cyan-50 pl-[10px] text-cyan-700;
+}
+
+.acct-card {
+  @apply rounded-md border border-slate-200 bg-white p-5 shadow-sm;
+}
+
+/* Status badges */
+.badge { @apply inline-flex items-center rounded px-2 py-0.5 text-xs font-bold; }
+.badge-pending  { @apply bg-amber-100 text-amber-700; }
+.badge-confirmed{ @apply bg-blue-100 text-blue-700; }
+.badge-processing{ @apply bg-indigo-100 text-indigo-700; }
+.badge-shipped  { @apply bg-cyan-100 text-cyan-700; }
+.badge-delivered{ @apply bg-emerald-100 text-emerald-700; }
+.badge-cancelled{ @apply bg-red-100 text-red-700; }
+.badge-returned { @apply bg-slate-100 text-slate-600; }
+
+/* Dark mode account variables */
+.dark .acct-card { @apply border-slate-700 bg-slate-800 text-slate-100; }
+.dark .acct-nav-link { @apply text-slate-300 hover:bg-slate-700 hover:text-white; }
+.dark .acct-nav-link.active { @apply border-cyan-400 bg-slate-700 text-cyan-400; }
+/* Dark mode global styles */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #0b0f19;
+  color: #f1f5f9;
+}
+
+.dark .bg-neutral-100 {
+  background-color: #0b0f19 !important;
+}
+
+.dark header.bg-white,
+.dark header .bg-white,
+.dark .acct-card,
+.dark .product-card,
+.dark .category-tile,
+.dark .promo-tile,
+.dark aside.bg-white,
+.dark section.bg-white,
+.dark nav.bg-white,
+.dark .bg-white {
+  background-color: #111827 !important;
+  color: #f1f5f9;
+}
+
+.dark header .bg-slate-50,
+.dark .bg-slate-50 {
+  background-color: #1e293b !important;
+}
+
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300 {
+  border-color: #1f2937 !important;
+}
+
+.dark .text-slate-950,
+.dark .text-slate-900,
+.dark .text-slate-800 {
+  color: #f8fafc !important;
+}
+
+.dark .text-slate-700,
+.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+.dark .input-field {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark .input-field:focus {
+  border-color: #06b6d4 !important;
+  --tw-ring-color: rgba(6, 182, 212, 0.2) !important;
+}
+
+.dark .btn-secondary {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark .btn-secondary:hover {
+  border-color: #06b6d4 !important;
+  color: #22d3ee !important;
+}
+
+.dark .menu-link {
+  color: #cbd5e1 !important;
+}
+
+.dark .menu-link:hover {
+  background-color: #1e293b !important;
+  color: #22d3ee !important;
+}
+
+.dark .nav-action {
+  color: #cbd5e1 !important;
+}
+
+.dark .nav-action:hover {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+.dark .nav-action strong {
+  color: #f8fafc !important;
+}
+
+.dark .acct-card {
+  border-color: #1f2937 !important;
+  background-color: #111827 !important;
+  color: #f1f5f9 !important;
+}
+
+.dark .acct-nav-link {
+  color: #cbd5e1 !important;
+}
+
+.dark .acct-nav-link:hover {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+.dark .acct-nav-link.active {
+  border-left-color: #06b6d4 !important;
+  background-color: #1e293b !important;
+  color: #22d3ee !important;
+}
+
