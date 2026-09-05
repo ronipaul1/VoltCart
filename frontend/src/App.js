@@ -3533,9 +3533,6 @@ function Login({ state }) {
           </div>
           <button className="mt-5 w-full btn-primary">Login</button>
           <p className="mt-4 text-center text-sm text-slate-500">New to VoltCart? <Link className="font-bold text-cyan-700" to="/register">Create account</Link></p>
-          <div className="mt-5 rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
-            <p><strong>Demo Admin:</strong> admin@voltcart.com / Admin@123</p>
-          </div>
         </form>
       </section>
     </Shell>
