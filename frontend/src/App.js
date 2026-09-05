@@ -31,6 +31,7 @@ import {
   SparklesIcon,
   SpeakerWaveIcon,
   Squares2X2Icon,
+  StarIcon,
   SunIcon,
   TagIcon,
   TruckIcon,
@@ -3623,13 +3624,13 @@ function AdminLayout({ state, children }) {
         { name: 'Products', path: '/admin/products', icon: CpuChipIcon },
         { name: 'Categories', path: '/admin/categories', icon: TagIcon },
         { name: 'Brands', path: '/admin/brands', icon: FireIcon },
-        { name: 'Inventory', path: '/admin/inventory', icon: ArchiveBoxIcon, badge: state.store.products.filter((p) => p.stock <= p.lowStockThreshold).length || null, badgeColor: 'amber' },
+        { name: 'Inventory', path: '/admin/inventory', icon: ArchiveBoxIcon, badge: (state?.store?.products || []).filter((p) => (p.stock || 0) <= (p.lowStockThreshold || 5)).length || null, badgeColor: 'amber' },
       ],
     },
     {
       group: 'SALES & LOGISTICS',
       items: [
-        { name: 'Orders', path: '/admin/orders', icon: TruckIcon, badge: state.store.orders.filter((o) => o.status === 'Pending').length || null, badgeColor: 'cyan' },
+        { name: 'Orders', path: '/admin/orders', icon: TruckIcon, badge: (state?.store?.orders || []).filter((o) => o.status === 'Pending').length || null, badgeColor: 'cyan' },
         { name: 'Customers', path: '/admin/customers', icon: UsersIcon },
         { name: 'Reviews', path: '/admin/reviews', icon: StarIcon },
       ],
@@ -3832,9 +3833,12 @@ function AdminLayout({ state, children }) {
 }
 
 function AdminDashboard({ state }) {
-  const revenue = state.store.orders.reduce((sum, o) => sum + (o.total || 0), 0);
-  const low = state.store.products.filter((p) => p.stock > 0 && p.stock <= p.lowStockThreshold);
-  const out = state.store.products.filter((p) => p.stock === 0);
+  const orders = state?.store?.orders || [];
+  const products = state?.store?.products || [];
+  const users = state?.store?.users || [];
+  const revenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const low = products.filter((p) => (p.stock || 0) > 0 && (p.stock || 0) <= (p.lowStockThreshold || 5));
+  const out = products.filter((p) => (p.stock || 0) === 0);
 
   const stats = [
     {
@@ -3848,7 +3852,7 @@ function AdminDashboard({ state }) {
     },
     {
       title: 'Total Orders',
-      value: state.store.orders.length,
+      value: orders.length,
       sub: 'Customer transactions',
       icon: TruckIcon,
       accent: 'cyan',
@@ -3857,7 +3861,7 @@ function AdminDashboard({ state }) {
     },
     {
       title: 'Total Customers',
-      value: state.store.users.filter((u) => u.role === 'customer').length,
+      value: users.filter((u) => u.role === 'customer').length,
       sub: 'Registered accounts',
       icon: UsersIcon,
       accent: 'purple',
@@ -3866,7 +3870,7 @@ function AdminDashboard({ state }) {
     },
     {
       title: 'Total Products',
-      value: state.store.products.length,
+      value: products.length,
       sub: 'Certified electronics catalog',
       icon: CpuChipIcon,
       accent: 'blue',
@@ -3875,7 +3879,7 @@ function AdminDashboard({ state }) {
     },
     {
       title: 'Pending Orders',
-      value: state.store.orders.filter((o) => o.status === 'Pending').length,
+      value: orders.filter((o) => o.status === 'Pending').length,
       sub: 'Requires dispatch fulfillment',
       icon: ArrowPathIcon,
       accent: 'amber',
@@ -3884,7 +3888,7 @@ function AdminDashboard({ state }) {
     },
     {
       title: 'Shipped Orders',
-      value: state.store.orders.filter((o) => o.status === 'Shipped').length,
+      value: orders.filter((o) => o.status === 'Shipped').length,
       sub: 'In transit with carrier',
       icon: CheckCircleIcon,
       accent: 'teal',
@@ -4014,13 +4018,15 @@ function AdminDashboard({ state }) {
 
 function AdminCharts({ state }) {
   // Real orders & category data
-  const orders = state.store.orders || [];
+  const orders = state?.store?.orders || [];
+  const categories = state?.store?.categories || [];
+  const products = state?.store?.products || [];
   const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
 
-  const byCategory = state.store.categories.map((c) => ({
+  const byCategory = categories.map((c) => ({
     name: c.name,
     slug: c.slug,
-    value: state.store.products.filter((p) => p.category === c.slug).reduce((sum, p) => sum + (p.sold || 0), 0),
+    value: products.filter((p) => p.category === c.slug).reduce((sum, p) => sum + (p.sold || 0), 0),
   }));
   const totalUnitsSold = byCategory.reduce((sum, c) => sum + c.value, 0);
   const maxCategoryValue = Math.max(...byCategory.map((c) => c.value), 1);
