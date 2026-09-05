@@ -140,28 +140,28 @@ button:disabled { cursor: not-allowed; }
   background-color: #0b0f19 !important;
 }
 
-.dark header.bg-white,
-.dark header .bg-white,
+.dark header.bg-white:not([class*="admin-"]),
+.dark header .bg-white:not([class*="admin-"]),
 .dark .acct-card,
 .dark .product-card,
 .dark .category-tile,
 .dark .promo-tile,
-.dark aside.bg-white,
-.dark section.bg-white,
-.dark nav.bg-white,
-.dark .bg-white {
+.dark aside.bg-white:not([class*="admin-"]),
+.dark section.bg-white:not([class*="admin-"]),
+.dark nav.bg-white:not([class*="admin-"]),
+.dark .bg-white:not([class*="admin-"]):not([class*="dark:bg-"]) {
   background-color: #111827 !important;
   color: #f1f5f9;
 }
 
-.dark header .bg-slate-50,
-.dark .bg-slate-50 {
+.dark header .bg-slate-50:not([class*="admin-"]),
+.dark .bg-slate-50:not([class*="admin-"]):not([class*="dark:bg-"]) {
   background-color: #1e293b !important;
 }
 
-.dark .border-slate-100,
-.dark .border-slate-200,
-.dark .border-slate-300 {
+.dark .border-slate-100:not([class*="admin-"]):not([class*="dark:border-"]),
+.dark .border-slate-200:not([class*="admin-"]):not([class*="dark:border-"]),
+.dark .border-slate-300:not([class*="admin-"]):not([class*="dark:border-"]) {
   border-color: #1f2937 !important;
 }
 
@@ -244,4 +244,168 @@ button:disabled { cursor: not-allowed; }
   background-color: #1e293b !important;
   color: #22d3ee !important;
 }
+
+/* ─── Modern Premium Admin Dashboard Design System ──────────────────────── */
+.admin-shell {
+  background-color: #090d16;
+  color: #e2e8f0;
+  min-height: 100vh;
+}
+
+.admin-sidebar {
+  background-color: #060911;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.admin-header {
+  background-color: rgba(9, 13, 22, 0.82);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.admin-card {
+  background-color: #101726;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+  border-radius: 1rem;
+}
+
+.admin-card-elevated {
+  background-color: #131d30;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 8px 28px -4px rgba(0, 0, 0, 0.5);
+  border-radius: 1rem;
+}
+
+.admin-card-subtle {
+  background-color: #0c121e;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.75rem;
+}
+
+.admin-card-hover {
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms ease, box-shadow 200ms ease;
+}
+.admin-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.6);
+}
+
+.admin-table-container {
+  background-color: #101726;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+}
+
+.admin-table thead {
+  background-color: #0c121e;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 150ms ease;
+}
+.admin-table tbody tr:last-child {
+  border-bottom: none;
+}
+.admin-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.admin-input {
+  background-color: #0c121e !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #f1f5f9 !important;
+  border-radius: 0.625rem;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.admin-input:focus {
+  border-color: #06b6d4 !important;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.18) !important;
+}
+.admin-input::placeholder {
+  color: #64748b !important;
+}
+
+.admin-btn-primary {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+  color: #041017 !important;
+  font-weight: 700 !important;
+  border-radius: 0.625rem !important;
+  transition: all 180ms ease !important;
+  box-shadow: 0 2px 12px rgba(6, 182, 212, 0.3) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.admin-btn-primary:hover {
+  filter: brightness(1.12) !important;
+  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.45) !important;
+  transform: translateY(-1px);
+}
+.admin-btn-primary:active {
+  transform: translateY(0);
+}
+
+.admin-btn-secondary {
+  background-color: #131c2e !important;
+  color: #cbd5e1 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  font-weight: 600 !important;
+  border-radius: 0.625rem !important;
+  transition: all 180ms ease !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.admin-btn-secondary:hover {
+  background-color: #1a2740 !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+.admin-btn-danger {
+  background-color: rgba(244, 63, 94, 0.12) !important;
+  color: #fb7185 !important;
+  border: 1px solid rgba(244, 63, 94, 0.25) !important;
+  font-weight: 600 !important;
+  border-radius: 0.625rem !important;
+  transition: all 180ms ease !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.admin-btn-danger:hover {
+  background-color: rgba(244, 63, 94, 0.22) !important;
+  border-color: rgba(244, 63, 94, 0.4) !important;
+  color: #fda4af !important;
+}
+
+/* Custom modern scrollbar for admin tables */
+.admin-custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.admin-custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(12, 18, 30, 0.6);
+  border-radius: 4px;
+}
+.admin-custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+}
+.admin-custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
 
