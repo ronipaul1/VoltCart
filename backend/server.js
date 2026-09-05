@@ -76,7 +76,7 @@ app.use('/api/addresses', require('./routes/address.routes'));
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'Herbal Ecommerce API is running',
+    message: 'VoltCart API is running',
     endpoint: '/api/health',
   });
 });
@@ -85,7 +85,7 @@ app.get('/', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    message: 'Herbal Ecommerce API is running',
+    message: 'VoltCart API is running',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
   });
