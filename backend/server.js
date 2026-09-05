@@ -76,7 +76,7 @@ app.use('/api/addresses', require('./routes/address.routes'));
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'VoltCart API is running'
+    message: 'VoltCart API is running',
     endpoint: '/api/health',
   });
 });
