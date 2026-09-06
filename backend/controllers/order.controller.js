@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { generateInvoicePDF, generatePackingSlipPDF, generateShippingLabelPDF } = require('../utils/invoice.util');
 const { sendEmail } = require('../utils/email.util');
+const emailService = require('../services/emailService');
 const { createNotification } = require('../utils/notification.util');
 const {
   buildParcelsFromCartItems,
@@ -386,12 +387,10 @@ exports.placeOrder = async (req, res) => {
     const user = userRows[0];
 
     createNotification(userId, 'Order Placed!', `Your order ${orderNumber} has been placed successfully.`, 'order', { orderId });
-    sendEmail({
-      to: user.email,
-      subject: `Order Confirmed - ${orderNumber}`,
-      template: 'order-confirmed',
-      data: { name: user.name, orderNumber, totalAmount: totalAmount.toFixed(2) },
-    }).catch(console.error);
+
+    // Non-blocking Brevo transactional emails (Customer + Admin)
+    emailService.sendOrderConfirmationEmail(orderId).catch((err) => console.error('[Brevo] Order confirmation error:', err.message));
+    emailService.sendAdminOrderReceivedEmail(orderId).catch((err) => console.error('[Brevo] Admin order received error:', err.message));
 
     res.status(201).json({
       success: true,
@@ -534,6 +533,15 @@ exports.createShippoLabel = async (req, res) => {
       ]
     );
 
+    // If order transitioned to shipped, send customer notification
+    if (nextOrderStatus === 'shipped') {
+      emailService.sendOrderShippedEmail(req.params.id, {
+        carrier: transaction.rate?.provider || order.shippo_rate_provider,
+        trackingNumber: transaction.tracking_number,
+        trackingUrl: transaction.label_url,
+      }).catch((err) => console.error('[Brevo] Order shipped error:', err.message));
+    }
+
     res.json({
       success: true,
       message: 'Shippo label created successfully.',
@@ -654,6 +662,17 @@ exports.updateOrderStatus = async (req, res) => {
         'order',
         { orderId: id }
       );
+    }
+
+    // Trigger Brevo transactional emails based on new status
+    if (status === 'shipped') {
+      emailService.sendOrderShippedEmail(id).catch((err) => console.error('[Brevo] Order shipped email error:', err.message));
+    } else if (status === 'delivered') {
+      emailService.sendOrderDeliveredEmail(id).catch((err) => console.error('[Brevo] Order delivered email error:', err.message));
+      emailService.sendAdminOrderDeliveredEmail(id).catch((err) => console.error('[Brevo] Admin delivered email error:', err.message));
+    } else if (status === 'cancelled') {
+      emailService.sendOrderCancelledEmail(id, { reason: description }).catch((err) => console.error('[Brevo] Order cancelled email error:', err.message));
+      emailService.sendAdminOrderCancelledEmail(id, { reason: description }).catch((err) => console.error('[Brevo] Admin cancelled email error:', err.message));
     }
 
     res.json({ success: true, message: 'Order status updated!' });
@@ -803,6 +822,10 @@ exports.cancelOrder = async (req, res) => {
       'INSERT INTO order_tracking (order_id, status, description) VALUES (?, ?, ?)',
       [req.params.id, 'Cancelled', reason || 'Order cancelled by customer']
     );
+
+    // Brevo transactional emails for cancellation (Customer + Admin)
+    emailService.sendOrderCancelledEmail(req.params.id, { reason }).catch((err) => console.error('[Brevo] Order cancelled error:', err.message));
+    emailService.sendAdminOrderCancelledEmail(req.params.id, { reason }).catch((err) => console.error('[Brevo] Admin cancelled error:', err.message));
 
     res.json({ success: true, message: 'Order cancelled successfully.' });
   } catch (error) {

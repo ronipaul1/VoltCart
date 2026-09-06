@@ -242,9 +242,37 @@ RATE_LIMIT_MAX=100
 
 AUTH_RATE_LIMIT_WINDOW_MS=900000
 AUTH_RATE_LIMIT_MAX=20
+
+# Transactional Emails (Brevo / Sendinblue)
+BREVO_API_KEY=xkeysib-your_brevo_api_key_here
+EMAIL_FROM_NAME=VoltCart
+EMAIL_FROM_ADDRESS=support@voltcart.com
+ADMIN_EMAIL=admin@voltcart.com
 ```
 
 > ⚠️ Never upload your `.env` file or secret credentials to GitHub.
+> 💡 When `BREVO_API_KEY` is omitted, the backend automatically runs in safe **Simulation Mode** (logs transactional emails to console without throwing errors).
+
+---
+
+## 📧 Transactional Emails (Brevo)
+
+VoltCart uses **Brevo (formerly Sendinblue)** for automated, responsive transactional notifications:
+
+- **Customer Notifications:**
+  - `Order Placed / Confirmed` (Itemized summary, totals, delivery address, tracking link)
+  - `Order Shipped` (Carrier details, tracking number, package link)
+  - `Order Delivered` (Delivery confirmation, review link)
+  - `Order Cancelled` (Cancellation details and refund timeline)
+  - `Payment Success` (Receipt, transaction reference, amount)
+  - `Payment Failed` (Actionable retry guidance)
+- **Admin Alerts (Sent only to `ADMIN_EMAIL`):**
+  - `New Order Placed`
+  - `Order Delivered`
+  - `Order Cancelled`
+  - `Payment Event (Success / Failure)`
+- **Duplicate Prevention:** Sent notifications are recorded in `order_email_logs` to prevent duplicate emails for the same event.
+- **Fault-Tolerant:** All email dispatches are non-blocking and will never crash or disrupt checkout or order updates.
 
 ---
 

@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const https = require('https');
+const emailService = require('../services/emailService');
 require('dotenv').config();
 
 // Razorpay setup
@@ -136,6 +137,19 @@ exports.verifyRazorpayPayment = async (req, res) => {
       await db.execute('UPDATE orders SET payment_status = "paid" WHERE id = ?', [order_id]);
       await db.execute(`UPDATE payments SET status = 'success', gateway_payment_id = ? WHERE order_id = ?`,
         [razorpay_payment_id || 'simulated', order_id]);
+
+      // Brevo transactional emails (Customer + Admin)
+      emailService.sendPaymentSuccessEmail(order_id, {
+        gateway: 'razorpay',
+        transactionId: razorpay_payment_id || 'simulated',
+      }).catch((err) => console.error('[Brevo] Payment success email error:', err.message));
+
+      emailService.sendAdminPaymentNotificationEmail(order_id, {
+        status: 'success',
+        gateway: 'razorpay',
+        transactionId: razorpay_payment_id || 'simulated',
+      }).catch((err) => console.error('[Brevo] Admin payment notification error:', err.message));
+
       return res.json({ success: true, message: 'Payment verified (simulated).' });
     }
 
@@ -146,6 +160,17 @@ exports.verifyRazorpayPayment = async (req, res) => {
       .digest('hex');
 
     if (generatedSignature !== razorpay_signature) {
+      emailService.sendPaymentFailedEmail(order_id, {
+        gateway: 'razorpay',
+        reason: 'Payment signature mismatch or cancelled transaction.',
+      }).catch((err) => console.error('[Brevo] Payment failed email error:', err.message));
+
+      emailService.sendAdminPaymentNotificationEmail(order_id, {
+        status: 'failed',
+        gateway: 'razorpay',
+        reason: 'Payment signature mismatch.',
+      }).catch((err) => console.error('[Brevo] Admin payment failure error:', err.message));
+
       return res.status(400).json({ success: false, message: 'Payment verification failed.' });
     }
 
@@ -154,6 +179,18 @@ exports.verifyRazorpayPayment = async (req, res) => {
       UPDATE payments SET status = 'success', gateway_payment_id = ?, gateway_signature = ?
       WHERE order_id = ?
     `, [razorpay_payment_id, razorpay_signature, order_id]);
+
+    // Brevo transactional emails (Customer + Admin)
+    emailService.sendPaymentSuccessEmail(order_id, {
+      gateway: 'razorpay',
+      transactionId: razorpay_payment_id,
+    }).catch((err) => console.error('[Brevo] Payment success email error:', err.message));
+
+    emailService.sendAdminPaymentNotificationEmail(order_id, {
+      status: 'success',
+      gateway: 'razorpay',
+      transactionId: razorpay_payment_id,
+    }).catch((err) => console.error('[Brevo] Admin payment notification error:', err.message));
 
     res.json({ success: true, message: 'Payment verified successfully!' });
   } catch (error) {
@@ -261,6 +298,31 @@ exports.verifyCashfreePayment = async (req, res) => {
       UPDATE payments SET status = ?, gateway_payment_id = ?
       WHERE order_id = ? AND payment_gateway = 'cashfree' AND gateway_order_id = ?
     `, [isPaid ? 'success' : 'pending', cashfreeOrder.cf_order_id || null, order_id, cashfree_order_id]);
+
+    // Brevo transactional emails (Customer + Admin)
+    if (isPaid) {
+      emailService.sendPaymentSuccessEmail(order_id, {
+        gateway: 'cashfree',
+        transactionId: cashfreeOrder.cf_order_id || cashfree_order_id,
+      }).catch((err) => console.error('[Brevo] Cashfree payment success email error:', err.message));
+
+      emailService.sendAdminPaymentNotificationEmail(order_id, {
+        status: 'success',
+        gateway: 'cashfree',
+        transactionId: cashfreeOrder.cf_order_id || cashfree_order_id,
+      }).catch((err) => console.error('[Brevo] Cashfree admin payment notification error:', err.message));
+    } else if (['FAILED', 'USER_DROPPED', 'CANCELLED'].includes(cashfreeOrder.order_status)) {
+      emailService.sendPaymentFailedEmail(order_id, {
+        gateway: 'cashfree',
+        reason: `Cashfree payment ${cashfreeOrder.order_status.toLowerCase()}.`,
+      }).catch((err) => console.error('[Brevo] Cashfree payment failed email error:', err.message));
+
+      emailService.sendAdminPaymentNotificationEmail(order_id, {
+        status: 'failed',
+        gateway: 'cashfree',
+        reason: `Cashfree payment ${cashfreeOrder.order_status.toLowerCase()}.`,
+      }).catch((err) => console.error('[Brevo] Cashfree admin payment failure error:', err.message));
+    }
 
     res.json({
       success: isPaid,
