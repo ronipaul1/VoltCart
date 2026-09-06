@@ -55,6 +55,7 @@ import {
   isCategoryActive,
   generateInvoiceNumber,
   generateOrderShippingLabel,
+  getEffectiveTheme,
   getNotificationPrefs,
   getSession,
   getShippingRatesForCart,
@@ -220,6 +221,19 @@ function Shell({ children, state }) {
   const navigate = useNavigate();
   const location = useLocation();
   const windowWidth = useWindowWidth();
+  const [effectiveTheme, setEffectiveTheme] = useState(() => getEffectiveTheme());
+
+  useEffect(() => {
+    const handler = () => setEffectiveTheme(getEffectiveTheme());
+    window.addEventListener('voltcart-theme-change', handler);
+    return () => window.removeEventListener('voltcart-theme-change', handler);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = getEffectiveTheme() === 'dark' ? 'light' : 'dark';
+    setEffectiveTheme(next);
+    saveThemePreference(next);
+  };
 
   const handleAllCatEnter = () => {
     if (allCatTimeoutRef.current) clearTimeout(allCatTimeoutRef.current);
@@ -384,6 +398,17 @@ function Shell({ children, state }) {
               <ShoppingCartIcon className="h-5 w-5" />
               <span><span>Cart</span><strong>{state.cart.reduce((sum, item) => sum + item.quantity, 0)} item(s)</strong></span>
             </Link>
+
+            {/* Quick Theme Toggle */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={`Switch to ${effectiveTheme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700 hover:border-cyan-500 hover:text-cyan-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-cyan-300 transition"
+              aria-label="Toggle dark mode"
+            >
+              {effectiveTheme === 'dark' ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
+            </button>
 
             {/* Mobile Hamburger Button */}
             <button
@@ -736,7 +761,19 @@ function Shell({ children, state }) {
                       <Link to="/register" onClick={() => setOpen(false)} className="block px-3 py-2 rounded-lg text-sm font-semibold text-cyan-700 hover:bg-cyan-50">📝 Register</Link>
                     </>
                   )}
-                  <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 px-3">
+                  <div className="pt-3 border-t border-slate-100">
+                    <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-xs font-semibold">
+                      <span className="text-slate-600 dark:text-slate-300">Theme</span>
+                      <button
+                        type="button"
+                        onClick={toggleTheme}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200"
+                      >
+                        {effectiveTheme === 'dark' ? <><SunIcon className="h-3.5 w-3.5" /> Light</> : <><MoonIcon className="h-3.5 w-3.5" /> Dark</>}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-500 px-3">
                     <p className="font-semibold text-slate-700">Support Helpline</p>
                     <p className="mt-0.5">📞 {state?.store?.settings?.phone || '+91 80 4567 8900'}</p>
                     <p className="text-[11px] text-slate-400 mt-1">{state?.store?.settings?.email || 'support@voltcart.com'}</p>
@@ -3636,11 +3673,17 @@ function AdminLayout({ state, children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
-  const [theme, setTheme] = useState(getThemePreference());
+  const [effectiveTheme, setEffectiveTheme] = useState(() => getEffectiveTheme());
+
+  useEffect(() => {
+    const handler = () => setEffectiveTheme(getEffectiveTheme());
+    window.addEventListener('voltcart-theme-change', handler);
+    return () => window.removeEventListener('voltcart-theme-change', handler);
+  }, []);
 
   const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
+    const next = getEffectiveTheme() === 'dark' ? 'light' : 'dark';
+    setEffectiveTheme(next);
     saveThemePreference(next);
   };
 
@@ -3684,7 +3727,7 @@ function AdminLayout({ state, children }) {
 
   return (
     <AdminGuard state={state}>
-      <div className="admin-shell flex min-h-screen text-slate-100">
+      <div className="admin-shell flex min-h-screen">
         {/* Mobile Backdrop */}
         {open && (
           <button
@@ -3838,10 +3881,10 @@ function AdminLayout({ state, children }) {
               <button
                 type="button"
                 onClick={toggleTheme}
-                title="Toggle Dark / Light Theme"
-                className="grid h-8 w-8 place-items-center rounded-lg border border-slate-700/80 bg-slate-800/50 text-slate-300 hover:border-cyan-500/40 hover:text-cyan-300 transition"
+                title={`Switch to ${effectiveTheme === 'dark' ? 'Light' : 'Dark'} Mode`}
+                className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:border-cyan-500/40 hover:text-cyan-600 dark:hover:text-cyan-300 transition"
               >
-                {theme === 'dark' ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
+                {effectiveTheme === 'dark' ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
               </button>
 
               {/* View Store Button */}

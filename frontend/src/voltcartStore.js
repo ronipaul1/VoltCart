@@ -768,18 +768,25 @@ export function getThemePreference() {
   return localStorage.getItem('voltcart_theme') || 'system';
 }
 
+export function getEffectiveTheme() {
+  const pref = getThemePreference();
+  if (pref === 'system') {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return pref;
+}
+
 export function saveThemePreference(theme) {
   localStorage.setItem('voltcart_theme', theme);
   applyTheme(theme);
+  window.dispatchEvent(new CustomEvent('voltcart-theme-change', { detail: theme }));
 }
 
 export function applyTheme(theme) {
   const html = document.documentElement;
-  if (theme === 'dark') {
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if (isDark) {
     html.classList.add('dark');
-  } else if (theme === 'system') {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    prefersDark ? html.classList.add('dark') : html.classList.remove('dark');
   } else {
     html.classList.remove('dark');
   }
