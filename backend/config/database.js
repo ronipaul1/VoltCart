@@ -1,16 +1,17 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
+const isRemoteHost = process.env.DB_HOST && !['localhost', '127.0.0.1'].includes(process.env.DB_HOST);
+const useSSL = process.env.DB_SSL === 'true' || isRemoteHost;
+
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
+  host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
-  ssl: {
-    rejectUnauthorized: false
-  },
+  ...(useSSL ? { ssl: { rejectUnauthorized: false } } : {}),
 
   waitForConnections: true,
   connectionLimit: 10,
@@ -26,8 +27,7 @@ async function testConnection() {
     console.log('✅ MySQL connected successfully');
     connection.release();
   } catch (error) {
-    console.error('❌ MySQL connection failed:', error.message);
-    process.exit(1);
+    console.error('⚠️ MySQL connection warning:', error.message);
   }
 }
 

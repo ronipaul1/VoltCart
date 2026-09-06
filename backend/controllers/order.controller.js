@@ -384,13 +384,54 @@ exports.placeOrder = async (req, res) => {
     await conn.commit();
 
     const [userRows] = await db.execute('SELECT email, name FROM users WHERE id = ?', [userId]);
-    const user = userRows[0];
+    const user = userRows[0] || {};
+    const customerEmail = user.email || req.user?.email || null;
+    const customerName = user.name || req.user?.name || 'Customer';
 
     createNotification(userId, 'Order Placed!', `Your order ${orderNumber} has been placed successfully.`, 'order', { orderId });
 
+    // Assemble full order context to guarantee instant dispatch without database latency
+    const orderContext = {
+      order: {
+        id: orderId,
+        order_number: orderNumber,
+        user_id: userId,
+        address_id,
+        subtotal: subtotal.toFixed(2),
+        discount_amount: discountAmount.toFixed(2),
+        gst_amount: totalGst.toFixed(2),
+        shipping_amount: shippingAmount.toFixed(2),
+        total_amount: totalAmount.toFixed(2),
+        payment_method,
+        order_status: 'placed',
+        created_at: new Date(),
+      },
+      user: {
+        id: userId,
+        name: customerName,
+        email: customerEmail,
+      },
+      items: cartItems.map(item => ({
+        product_name: item.name,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: ((toAmount(item.price) + ((toAmount(item.price) * toAmount(item.gst_percent)) / 100)) * item.quantity).toFixed(2),
+      })),
+      address,
+    };
+
     // Non-blocking Brevo transactional emails (Customer + Admin)
-    emailService.sendOrderConfirmationEmail(orderId).catch((err) => console.error('[Brevo] Order confirmation error:', err.message));
-    emailService.sendAdminOrderReceivedEmail(orderId).catch((err) => console.error('[Brevo] Admin order received error:', err.message));
+    emailService.sendOrderConfirmationEmail(orderId, orderContext).then((result) => {
+      if (!result?.success && !result?.skipped) {
+        console.warn('[Brevo] Order confirmation email not delivered:', result?.reason || result?.error);
+      }
+    }).catch((err) => console.error('[Brevo] Order confirmation error:', err.message));
+
+    emailService.sendAdminOrderReceivedEmail(orderId, orderContext).then((result) => {
+      if (!result?.success && !result?.skipped) {
+        console.warn('[Brevo] Admin order received email not delivered:', result?.reason || result?.error);
+      }
+    }).catch((err) => console.error('[Brevo] Admin order received error:', err.message));
 
     res.status(201).json({
       success: true,

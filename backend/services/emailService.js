@@ -1,8 +1,28 @@
+const fs = require('fs');
+const path = require('path');
 const db = require('../config/database');
 const templates = require('./emailTemplates');
 require('dotenv').config();
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+const logFilePath = path.join(__dirname, '..', 'email-service.log');
+
+/**
+ * File & console audit logger
+ */
+function logEmailActivity(level, message, details = {}) {
+  const timestamp = new Date().toISOString();
+  const detailStr = Object.keys(details).length ? ` | ${JSON.stringify(details)}` : '';
+  const logLine = `[${timestamp}] [${level}] ${message}${detailStr}\n`;
+  try {
+    fs.appendFileSync(logFilePath, logLine);
+  } catch (_) {}
+  if (level === 'ERROR') {
+    console.error(`[Brevo Email] ${message}`, details);
+  } else {
+    console.log(`[Brevo Email] ${message}`, details);
+  }
+}
 
 // Initialize tracking table flag
 let tableEnsured = false;
@@ -30,7 +50,7 @@ async function ensureTrackingTable() {
     `);
     tableEnsured = true;
   } catch (err) {
-    console.error('[Brevo Service] Error ensuring order_email_logs table:', err.message);
+    logEmailActivity('WARN', `Could not initialize order_email_logs table: ${err.message}`);
   }
 }
 
@@ -49,8 +69,20 @@ const isBrevoConfigured = () => {
 
 /**
  * Fetch full order context (order, user, items, address)
+ * Supports direct pass-through via options to prevent database roundtrips or missing row race conditions.
  */
-async function getFullOrderContext(orderIdOrNumber) {
+async function getFullOrderContext(orderIdOrNumber, options = {}) {
+  // 1. Direct pass-through if caller already assembled context
+  if (options.order && options.user) {
+    return {
+      order: options.order,
+      user: options.user,
+      items: options.items || [],
+      address: options.address || null,
+    };
+  }
+
+  // 2. Query database
   try {
     const isNumeric = !isNaN(orderIdOrNumber);
     const query = isNumeric
@@ -58,31 +90,40 @@ async function getFullOrderContext(orderIdOrNumber) {
       : 'SELECT * FROM orders WHERE order_number = ?';
 
     const [orders] = await db.execute(query, [orderIdOrNumber]);
-    if (!orders.length) return null;
+    if (!orders.length) {
+      logEmailActivity('WARN', `Order #${orderIdOrNumber} not found in database`);
+      return null;
+    }
 
     const order = orders[0];
     const orderId = order.id;
 
     // Fetch user details
-    let user = { name: 'Customer', email: '' };
+    let user = options.user || { name: 'Customer', email: '' };
     if (order.user_id) {
       const [users] = await db.execute('SELECT id, name, email, phone FROM users WHERE id = ?', [order.user_id]);
-      if (users.length) user = users[0];
+      if (users.length) {
+        user = users[0];
+      }
     }
 
     // Fetch address details
-    let address = null;
-    if (order.address_id) {
+    let address = options.address || null;
+    if (order.address_id && !address) {
       const [addresses] = await db.execute('SELECT * FROM addresses WHERE id = ?', [order.address_id]);
       if (addresses.length) address = addresses[0];
     }
 
     // Fetch order items
-    const [items] = await db.execute('SELECT * FROM order_items WHERE order_id = ?', [orderId]);
+    let items = options.items || [];
+    if (!items.length) {
+      const [dbItems] = await db.execute('SELECT * FROM order_items WHERE order_id = ?', [orderId]);
+      items = dbItems;
+    }
 
     return { order, user, items, address };
   } catch (err) {
-    console.error(`[Brevo Service] Failed to retrieve order context for ${orderIdOrNumber}:`, err.message);
+    logEmailActivity('ERROR', `Failed to retrieve order context for #${orderIdOrNumber}: ${err.message}`);
     return null;
   }
 }
@@ -233,9 +274,17 @@ async function sendBrevoEmail({
  */
 exports.sendOrderConfirmationEmail = async (orderId, options = {}) => {
   try {
-    const ctx = await getFullOrderContext(orderId);
-    if (!ctx || !ctx.user.email) return { success: false, reason: 'Order or user email not found' };
+    const ctx = await getFullOrderContext(orderId, options);
+    if (!ctx) {
+      logEmailActivity('WARN', `Order confirmation cancelled: Context could not be resolved for #${orderId}`);
+      return { success: false, reason: 'Order context not found' };
+    }
+    if (!ctx.user || !ctx.user.email) {
+      logEmailActivity('WARN', `Order confirmation cancelled for #${orderId}: No email on user record`, { user: ctx.user });
+      return { success: false, reason: 'Customer email not found' };
+    }
 
+    logEmailActivity('INFO', `Preparing order confirmation for #${ctx.order?.order_number || orderId} to ${ctx.user.email}`);
     const { subject, htmlContent, textContent } = templates.orderConfirmationTemplate(ctx);
     return await sendBrevoEmail({
       orderId: ctx.order.id,
@@ -248,7 +297,7 @@ exports.sendOrderConfirmationEmail = async (orderId, options = {}) => {
       textContent,
     });
   } catch (err) {
-    console.error('[Brevo Service] sendOrderConfirmationEmail failed:', err.message);
+    logEmailActivity('ERROR', `sendOrderConfirmationEmail exception for #${orderId}: ${err.message}`);
     return { success: false, error: err.message };
   }
 };
@@ -416,14 +465,21 @@ exports.sendPaymentFailedEmail = async (orderId, paymentDetails = {}) => {
 /**
  * 7. Send Admin: New Order Received Email
  */
-exports.sendAdminOrderReceivedEmail = async (orderId) => {
+exports.sendAdminOrderReceivedEmail = async (orderId, options = {}) => {
   try {
     const adminEmail = getAdminEmail();
-    if (!adminEmail) return { success: false, reason: 'ADMIN_EMAIL not configured' };
+    if (!adminEmail) {
+      logEmailActivity('WARN', `Skipped admin order alert: ADMIN_EMAIL not configured`);
+      return { success: false, reason: 'ADMIN_EMAIL not configured' };
+    }
 
-    const ctx = await getFullOrderContext(orderId);
-    if (!ctx) return { success: false, reason: 'Order not found' };
+    const ctx = await getFullOrderContext(orderId, options);
+    if (!ctx) {
+      logEmailActivity('WARN', `Skipped admin order alert: Order context not found for #${orderId}`);
+      return { success: false, reason: 'Order not found' };
+    }
 
+    logEmailActivity('INFO', `Preparing admin order alert for #${ctx.order?.order_number || orderId} to ${adminEmail}`);
     const { subject, htmlContent, textContent } = templates.adminOrderReceivedTemplate(ctx);
     return await sendBrevoEmail({
       orderId: ctx.order.id,
@@ -436,7 +492,7 @@ exports.sendAdminOrderReceivedEmail = async (orderId) => {
       textContent,
     });
   } catch (err) {
-    console.error('[Brevo Service] sendAdminOrderReceivedEmail failed:', err.message);
+    logEmailActivity('ERROR', `sendAdminOrderReceivedEmail exception for #${orderId}: ${err.message}`);
     return { success: false, error: err.message };
   }
 };
