@@ -13,9 +13,8 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-const allowedFrontendOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
 app.use(cors({
-  origin: process.env.NODE_ENV === 'development' ? true : allowedFrontendOrigin,
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

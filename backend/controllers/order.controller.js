@@ -873,3 +873,70 @@ exports.cancelOrder = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to cancel order.' });
   }
 };
+
+exports.notifyOrderPlacement = async (req, res) => {
+  try {
+    const { order, user, items, address } = req.body;
+    if (!order) {
+      return res.status(400).json({ success: false, message: 'Order data is required.' });
+    }
+
+    const orderId = order.id || Date.now();
+    const orderNumber = order.orderNumber || order.order_number || `VC-${String(orderId).slice(-6)}`;
+    const customerEmail = user?.email || order.email || req.body.email;
+    const customerName = user?.name || order.customer || 'Valued Customer';
+
+    console.log(`[Order Placement Notification] Processing order #${orderNumber} for ${customerEmail}`);
+
+    const formattedContext = {
+      order: {
+        id: orderId,
+        order_number: orderNumber,
+        user_id: user?.id || null,
+        subtotal: Number(order.subtotal || 0).toFixed(2),
+        discount_amount: Number(order.couponDiscount || order.discount_amount || 0).toFixed(2),
+        gst_amount: Number(order.tax || order.gst_amount || 0).toFixed(2),
+        shipping_amount: Number(order.shippingCharge || order.shipping_amount || 0).toFixed(2),
+        total_amount: Number(order.total || order.total_amount || 0).toFixed(2),
+        payment_method: order.paymentMethod || order.payment_method || 'Cash on Delivery',
+        order_status: order.status || order.order_status || 'placed',
+        created_at: order.createdAt ? new Date(order.createdAt) : new Date(),
+      },
+      user: {
+        id: user?.id || null,
+        name: customerName,
+        email: customerEmail,
+        phone: user?.phone || order.phone || '',
+      },
+      items: (items || order.items || []).map((item) => ({
+        product_name: item.name || item.product_name,
+        quantity: item.quantity || 1,
+        unit_price: Number(item.price || item.unit_price || 0).toFixed(2),
+        total_price: Number((item.price || item.unit_price || 0) * (item.quantity || 1)).toFixed(2),
+      })),
+      address: typeof address === 'string' ? address : (address?.addressLine || address?.address || ''),
+    };
+
+    // Dispatch both customer and admin emails via Brevo
+    const customerPromise = emailService.sendOrderConfirmationEmail(orderId, formattedContext);
+    const adminPromise = emailService.sendAdminOrderReceivedEmail(orderId, formattedContext);
+
+    const [customerRes, adminRes] = await Promise.allSettled([customerPromise, adminPromise]);
+
+    console.log(`[Order Placement Notification] Dispatched emails for #${orderNumber}:`, {
+      customer: customerRes.status === 'fulfilled' ? customerRes.value : customerRes.reason?.message,
+      admin: adminRes.status === 'fulfilled' ? adminRes.value : adminRes.reason?.message,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Order emails processed successfully.',
+      orderNumber,
+      customerEmail,
+    });
+  } catch (error) {
+    console.error('[Order Placement Notification] Error processing order email:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

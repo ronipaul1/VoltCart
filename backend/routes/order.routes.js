@@ -3,6 +3,9 @@ const router = express.Router();
 const orderCtrl = require('../controllers/order.controller');
 const { authenticate, adminOnly } = require('../middleware/auth.middleware');
 
+// Public webhook / storefront notification endpoint for order email dispatch
+router.post('/notify-placement', orderCtrl.notifyOrderPlacement);
+
 router.use(authenticate);
 router.post('/shipping/rates', orderCtrl.getShippingRates);
 router.post('/', orderCtrl.placeOrder);

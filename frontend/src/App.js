@@ -1527,6 +1527,37 @@ function Checkout({ state }) {
     setStep(3);
   };
 
+  const dispatchOrderNotificationToBackend = async (order, user) => {
+    try {
+      const apiBase = process.env.REACT_APP_API_URL
+        ? process.env.REACT_APP_API_URL.replace(/\/$/, '')
+        : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:5000/api'
+            : '/api');
+
+      const url = `${apiBase}/orders/notify-placement`;
+      await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          order,
+          user: {
+            id: user?.id,
+            name: user?.name || order.customer,
+            email: user?.email || order.email,
+            phone: user?.phone || order.phone,
+          },
+          items: order.items || [],
+          address: order.address,
+        }),
+      });
+    } catch (err) {
+      console.warn('[VoltCart Email] Backend notification non-fatal error:', err.message);
+    }
+  };
+
   const finalizeOrderPlacement = (method, paymentId = null, razorpayOrderId = null) => {
     try {
       const order = placeOrder({
@@ -1549,6 +1580,10 @@ function Checkout({ state }) {
       // Clear cart
       state.setCart([]);
       toast.success(method === 'Cash on Delivery' ? 'COD Order Placed Successfully!' : 'Razorpay Payment Verified & Order Confirmed!');
+
+      // Asynchronously trigger Brevo transactional emails via backend
+      dispatchOrderNotificationToBackend(order, state.user);
+
       navigate(`/order-success/${order.id}`);
     } catch (err) {
       toast.error(err.message || 'Failed to finalize order.');
