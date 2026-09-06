@@ -140,7 +140,7 @@ function useVoltCart() {
     toast.success(wishlist.includes(id) ? 'Removed from wishlist' : 'Saved to wishlist');
   };
 
-  return { store, user, setUser, cart, setCart, cartItems, subtotal, wishlist, addToCart, updateCart, toggleWishlist };
+  return { store, setStore, user, setUser, cart, setCart, cartItems, subtotal, wishlist, addToCart, updateCart, toggleWishlist };
 }
 
 // ─── Category Icon Resolver ───────────────────────────────────────────────────
@@ -321,10 +321,10 @@ function Shell({ children, state }) {
         {/* Top Info Bar */}
         <div className="border-b border-slate-100 bg-slate-50 px-4 py-1.5 text-xs text-slate-600">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-5 gap-y-1 md:justify-between">
-            <span>Free express delivery above Rs 25,000</span>
+            <span>Free express delivery above {formatCurrency(state?.store?.settings?.freeShippingThreshold ?? 25000)}</span>
             <span>Genuine products & warranty</span>
             <span>Secure Razorpay payments</span>
-            <span>Support: +91 80 4567 8900</span>
+            <span>Support: {state?.store?.settings?.phone || '+91 80 4567 8900'}</span>
           </div>
         </div>
 
@@ -738,8 +738,8 @@ function Shell({ children, state }) {
                   )}
                   <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 px-3">
                     <p className="font-semibold text-slate-700">Support Helpline</p>
-                    <p className="mt-0.5">📞 +91 80 4567 8900</p>
-                    <p className="text-[11px] text-slate-400 mt-1">support@voltcart.com</p>
+                    <p className="mt-0.5">📞 {state?.store?.settings?.phone || '+91 80 4567 8900'}</p>
+                    <p className="text-[11px] text-slate-400 mt-1">{state?.store?.settings?.email || 'support@voltcart.com'}</p>
                   </div>
                 </div>
               </div>
@@ -755,22 +755,33 @@ function Shell({ children, state }) {
         <Link className="py-2" to="/cart">Cart</Link>
         <Link className="py-2" to={state.user ? '/account' : '/login'}>Account</Link>
       </nav>
-      <Footer />
+      <Footer settings={state?.store?.settings} />
     </div>
   );
 }
 
-function Footer() {
+function Footer({ settings }) {
+  const storeName = settings?.storeName || 'VoltCart';
+  const tagline = settings?.tagline || 'Everything Tech, One Cart. Verified electronics, live shipping tracking, and dependable customer support.';
+  const email = settings?.email || 'support@voltcart.com';
+  const phone = settings?.phone || '+91 80 4567 8900';
+
   return (
     <footer className="border-t border-slate-200 bg-slate-950 text-white">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 md:grid-cols-4">
         <div>
-          <h3 className="text-xl font-black">VoltCart</h3>
-          <p className="mt-2 text-sm text-slate-300">Everything Tech, One Cart. Verified electronics, live shipping tracking, and dependable customer support.</p>
+          <h3 className="text-xl font-black">{storeName}</h3>
+          <p className="mt-2 text-sm text-slate-300">{tagline}</p>
         </div>
         <FooterLinks title="Shop" links={['Smartphones', 'Laptops', 'Headphones', 'Gaming']} />
         <FooterLinks title="Fulfillment & Support" links={['Shippo Live Tracking', 'Tax Invoices', 'Secure Payments', 'Support Helpline']} />
-        <div><h4 className="font-bold">Contact</h4><p className="mt-3 text-sm text-slate-300">support@voltcart.com<br />+91 80 4567 8900</p></div>
+        <div>
+          <h4 className="font-bold">Contact</h4>
+          <p className="mt-3 text-sm text-slate-300">
+            {email}<br />
+            {phone}
+          </p>
+        </div>
       </div>
     </footer>
   );
@@ -1369,11 +1380,32 @@ function Cart({ state }) {
 }
 
 function OrderSummary({ state, checkout = false, couponDiscount = 0, shippingCost = null }) {
-  const freeThresh = state.store.settings.freeShippingThreshold || 25000;
-  const delivery = shippingCost !== null ? shippingCost : (state.subtotal >= freeThresh ? 0 : (state.store.settings.deliveryCharge || 199));
-  const tax = Math.round((state.subtotal - couponDiscount) * (state.store.settings.taxRate / 100));
+  const freeThresh = state?.store?.settings?.freeShippingThreshold ?? 25000;
+  const deliveryCharge = state?.store?.settings?.deliveryCharge ?? 199;
+  const taxRate = state?.store?.settings?.taxRate ?? 18;
+  const delivery = shippingCost !== null ? shippingCost : (state.subtotal >= freeThresh ? 0 : deliveryCharge);
+  const tax = Math.round((state.subtotal - couponDiscount) * (taxRate / 100));
   const total = state.subtotal - couponDiscount + delivery + tax;
-  return <aside className="h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-36"><h2 className="text-xl font-black">Order Summary</h2><SummaryLine label="Subtotal" value={formatCurrency(state.subtotal)} /><SummaryLine label="Coupon Discount" value={`-${formatCurrency(couponDiscount)}`} /><SummaryLine label="Shipping & Delivery" value={delivery ? formatCurrency(delivery) : 'Free'} /><SummaryLine label="Estimated Tax (18%)" value={formatCurrency(tax)} /><div className="mt-4 flex justify-between border-t pt-4 text-lg font-black"><span>Total</span><span>{formatCurrency(total)}</span></div>{checkout && <Link className="mt-5 block w-full btn-primary text-center" to="/checkout">Proceed to Checkout</Link>}<div className="mt-4 grid gap-2 rounded bg-slate-50 p-3 text-xs font-bold text-slate-600"><span>Official Tax Invoice</span><span>Shippo Courier Dispatch</span><span>7-Day Replacement</span></div><Link className="mt-3 block text-center font-bold text-cyan-700" to="/shop">Continue Shopping</Link></aside>;
+  return (
+    <aside className="h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-36">
+      <h2 className="text-xl font-black">Order Summary</h2>
+      <SummaryLine label="Subtotal" value={formatCurrency(state.subtotal)} />
+      <SummaryLine label="Coupon Discount" value={`-${formatCurrency(couponDiscount)}`} />
+      <SummaryLine label="Shipping & Delivery" value={delivery ? formatCurrency(delivery) : 'Free'} />
+      <SummaryLine label={`Estimated Tax (${taxRate}%)`} value={formatCurrency(tax)} />
+      <div className="mt-4 flex justify-between border-t pt-4 text-lg font-black">
+        <span>Total</span>
+        <span>{formatCurrency(total)}</span>
+      </div>
+      {checkout && <Link className="mt-5 block w-full btn-primary text-center" to="/checkout">Proceed to Checkout</Link>}
+      <div className="mt-4 grid gap-2 rounded bg-slate-50 p-3 text-xs font-bold text-slate-600">
+        <span>Official Tax Invoice</span>
+        <span>Shippo Courier Dispatch</span>
+        <span>7-Day Replacement</span>
+      </div>
+      <Link className="mt-3 block text-center font-bold text-cyan-700" to="/shop">Continue Shopping</Link>
+    </aside>
+  );
 }
 
 function SummaryLine({ label, value }) {
@@ -1565,7 +1597,9 @@ function Checkout({ state }) {
     }
   };
 
-  const shippingCost = selectedRate ? selectedRate.cost : (state.subtotal >= 25000 ? 0 : 199);
+  const freeThresh = state?.store?.settings?.freeShippingThreshold ?? 25000;
+  const defaultDelivery = state?.store?.settings?.deliveryCharge ?? 199;
+  const shippingCost = selectedRate ? selectedRate.cost : (state.subtotal >= freeThresh ? 0 : defaultDelivery);
 
   return (
     <Shell state={state}>
@@ -1691,7 +1725,7 @@ function Checkout({ state }) {
                         <span className="text-base font-black text-slate-900">
                           {rate.cost === 0 ? 'FREE' : formatCurrency(rate.cost)}
                         </span>
-                        {rate.cost === 0 && <span className="block text-[10px] font-bold text-emerald-700">Orders above ₹25,000</span>}
+                        {rate.cost === 0 && <span className="block text-[10px] font-bold text-emerald-700">Orders above {formatCurrency(freeThresh)}</span>}
                       </div>
                     </label>
                   ))}
@@ -1965,11 +1999,11 @@ function InvoiceView({ state }) {
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between border-b border-slate-200 pb-6 gap-4">
           <div>
-            <h1 className="text-2xl font-black text-slate-900">VoltCart</h1>
-            <p className="text-xs font-bold text-cyan-700 tracking-wider">EVERYTHING TECH, ONE CART</p>
-            <p className="text-xs text-slate-500 mt-1">VoltCart Technologies Pvt Ltd</p>
-            <p className="text-xs text-slate-500">108 Tech Park Boulevard, Electronic City, Bengaluru 560100</p>
-            <p className="text-xs text-slate-500">GSTIN: 29ABCDE1234F1Z5 | support@voltcart.com</p>
+            <h1 className="text-2xl font-black text-slate-900">{state?.store?.settings?.storeName || 'VoltCart'}</h1>
+            <p className="text-xs font-bold text-cyan-700 tracking-wider uppercase">{state?.store?.settings?.tagline || 'EVERYTHING TECH, ONE CART'}</p>
+            <p className="text-xs text-slate-500 mt-1">{state?.store?.settings?.storeName || 'VoltCart'} Technologies Pvt Ltd</p>
+            <p className="text-xs text-slate-500">{state?.store?.settings?.shippingOrigin?.address || state?.store?.settings?.address || '108 Tech Park Boulevard, Electronic City, Bengaluru 560100'}</p>
+            <p className="text-xs text-slate-500">GSTIN: 29ABCDE1234F1Z5 | {state?.store?.settings?.email || 'support@voltcart.com'}</p>
           </div>
           <div className="text-right">
             <h2 className="text-xl font-black text-slate-900">TAX INVOICE</h2>
@@ -2009,7 +2043,7 @@ function InvoiceView({ state }) {
                 <th className="p-2.5">SKU</th>
                 <th className="p-2.5 text-center">Qty</th>
                 <th className="p-2.5 text-right">Unit Price</th>
-                <th className="p-2.5 text-right">GST (18%)</th>
+                <th className="p-2.5 text-right">GST ({state?.store?.settings?.taxRate ?? 18}%)</th>
                 <th className="p-2.5 text-right">Total</th>
               </tr>
             </thead>
@@ -2025,7 +2059,7 @@ function InvoiceView({ state }) {
                   <td className="p-2.5 font-mono text-slate-500">{item.sku || `VC-${idx + 1}`}</td>
                   <td className="p-2.5 text-center font-bold">{item.quantity}</td>
                   <td className="p-2.5 text-right">{formatCurrency(item.price)}</td>
-                  <td className="p-2.5 text-right text-slate-600">{formatCurrency((item.price * item.quantity) * 0.18)}</td>
+                  <td className="p-2.5 text-right text-slate-600">{formatCurrency((item.price * item.quantity) * ((state?.store?.settings?.taxRate ?? 18) / 100))}</td>
                   <td className="p-2.5 text-right font-black">{formatCurrency(item.price * item.quantity)}</td>
                 </tr>
               ))}
@@ -2055,8 +2089,8 @@ function InvoiceView({ state }) {
 
         {/* Footer */}
         <div className="mt-8 border-t border-slate-200 pt-4 text-center text-[10px] text-slate-500">
-          <p className="font-bold text-slate-700">Thank you for choosing VoltCart.</p>
-          <p className="mt-0.5">This is an authentic computer-generated tax invoice. For queries or warranty claims, contact support@voltcart.com.</p>
+          <p className="font-bold text-slate-700">Thank you for choosing {state?.store?.settings?.storeName || 'VoltCart'}.</p>
+          <p className="mt-0.5">This is an authentic computer-generated tax invoice. For queries or warranty claims, contact {state?.store?.settings?.email || 'support@voltcart.com'}.</p>
         </div>
       </div>
     </div>
@@ -5618,10 +5652,22 @@ function AdminSettings({ state }) {
     }
   );
 
+  useEffect(() => {
+    if (state.store?.settings) {
+      setSettings(state.store.settings);
+      if (state.store.settings.shippingOrigin) {
+        setOrigin(state.store.settings.shippingOrigin);
+      }
+    }
+  }, [state.store?.settings]);
+
   const save = () => {
     const next = getStore();
     next.settings = { ...settings, shippingOrigin: origin };
     saveStore(next);
+    if (state.setStore) {
+      state.setStore(next);
+    }
     toast.success('Store & Shipping Origin Settings Saved');
   };
 
@@ -5747,7 +5793,43 @@ function Empty({ title, text, action }) {
 }
 
 function StaticPage({ state, title }) {
-  return <Shell state={state}><section className="section"><h1 className="text-3xl font-black">{title}</h1><p className="mt-3 max-w-3xl text-slate-600">VoltCart brings smartphones, laptops, audio gear, gaming devices, and accessories into one reliable shopping destination with verified inventory, Shippo logistics tracking, and Razorpay payments.</p></section></Shell>;
+  const settings = state?.store?.settings || {};
+  const isContact = title.toLowerCase().includes('contact');
+
+  return (
+    <Shell state={state}>
+      <section className="section max-w-4xl">
+        <h1 className="text-3xl font-black">{title}</h1>
+        {isContact ? (
+          <div className="mt-6 space-y-6">
+            <p className="text-slate-600">
+              Have questions regarding orders, fulfillment, warranty claims, or product inquiries? Our support team is ready to assist you.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="font-bold text-slate-900 text-sm">📞 Phone Support</h3>
+                <p className="mt-2 text-sm font-semibold text-cyan-700">{settings.phone || '+91 80 4567 8900'}</p>
+                <p className="text-xs text-slate-400 mt-1">Mon–Sat, 9:00 AM – 8:00 PM IST</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="font-bold text-slate-900 text-sm">📧 Email Support</h3>
+                <p className="mt-2 text-sm font-semibold text-cyan-700">{settings.email || 'support@voltcart.com'}</p>
+                <p className="text-xs text-slate-400 mt-1">24-hour turnaround for inquiries</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="font-bold text-slate-900 text-sm">📍 Fulfillment Hub</h3>
+                <p className="mt-2 text-xs text-slate-600">{settings.shippingOrigin?.address || settings.address || '108 Tech Park Boulevard, Electronic City, Bengaluru 560100'}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 max-w-3xl text-slate-600">
+            {settings.storeName || 'VoltCart'} brings smartphones, laptops, audio gear, gaming devices, and accessories into one reliable shopping destination with verified inventory, Shippo logistics tracking, and Razorpay payments.
+          </p>
+        )}
+      </section>
+    </Shell>
+  );
 }
 
 // ─── App & Router ─────────────────────────────────────────────────────────────
