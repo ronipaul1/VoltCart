@@ -57,6 +57,7 @@ import {
   generateOrderShippingLabel,
   getEffectiveTheme,
   getNotificationPrefs,
+  getApiBaseUrl,
   getSession,
   getShippingRatesForCart,
   getStore,
@@ -5735,6 +5736,7 @@ function AdminSettings({ state }) {
       country: 'India',
     }
   );
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (state.store?.settings) {
@@ -5745,14 +5747,32 @@ function AdminSettings({ state }) {
     }
   }, [state.store?.settings]);
 
-  const save = () => {
+  const save = async () => {
+    setSaving(true);
     const next = getStore();
     next.settings = { ...settings, shippingOrigin: origin };
-    saveStore(next);
+    saveStore(next, false);
     if (state.setStore) {
       state.setStore(next);
     }
-    toast.success('Store & Shipping Origin Settings Saved');
+    try {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/store/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ store: next }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success('Store Settings saved & synchronized to MySQL Database!');
+      } else {
+        toast.error(`Saved in browser, but database sync returned: ${data.message || 'Error'}`);
+      }
+    } catch (err) {
+      toast.error(`Saved in browser, but database sync failed: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -5789,8 +5809,8 @@ function AdminSettings({ state }) {
               <input type="number" className="admin-input mt-1.5 text-sm w-full p-2.5" value={settings.taxRate} onChange={(e) => setSettings({ ...settings, taxRate: Number(e.target.value) })} />
             </label>
           </div>
-          <button className="mt-4 admin-btn-primary py-2.5 px-6 font-bold text-xs" onClick={save}>
-            Save Store Settings
+          <button disabled={saving} className="mt-4 admin-btn-primary py-2.5 px-6 font-bold text-xs disabled:opacity-60" onClick={save}>
+            {saving ? 'Saving & Syncing to Database...' : 'Save Store Settings'}
           </button>
         </div>
 

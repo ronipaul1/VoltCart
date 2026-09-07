@@ -303,16 +303,16 @@ const initialStore = {
     storeName: 'VoltCart',
     tagline: 'Authentic Electronics, One Cart',
     email: 'support@voltcart.com',
-    phone: '+91 80 4567 8900',
+    phone: '+91 9477822515',
     address: '108 Tech Park Boulevard, Electronic City, Bengaluru, India',
     deliveryCharge: 199,
-    freeShippingThreshold: 25000,
+    freeShippingThreshold: 499,
     paymentMethods: ['Razorpay', 'Cash on Delivery'],
     taxRate: 18,
     shippingOrigin: {
       warehouseName: 'VoltCart Central Fulfillment',
       contactName: 'Warehouse Operations Manager',
-      phone: '+91 80 4567 8900',
+      phone: '+91 9477822515',
       address: '108 Tech Park Boulevard, Electronic City, Phase 1',
       city: 'Bengaluru',
       state: 'Karnataka',
@@ -419,9 +419,9 @@ export const getApiBaseUrl = () => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:5000/api';
     }
-    return 'https://voltcart-backend.onrender.com/api';
+    return '/api';
   }
-  return 'https://voltcart-backend.onrender.com/api';
+  return '/api';
 };
 
 let syncTimer = null;
@@ -478,6 +478,9 @@ export function getStore() {
 
     if (!store.settings) store.settings = initialStore.settings;
     if (!store.settings.shippingOrigin) store.settings.shippingOrigin = initialStore.settings.shippingOrigin;
+    if (store.settings.phone === '+91 80 4567 8900') store.settings.phone = initialStore.settings.phone;
+    if (store.settings.freeShippingThreshold === 25000) store.settings.freeShippingThreshold = initialStore.settings.freeShippingThreshold;
+    if (store.settings.shippingOrigin?.phone === '+91 80 4567 8900') store.settings.shippingOrigin.phone = initialStore.settings.shippingOrigin.phone;
 
     return store;
   } catch (_) {
