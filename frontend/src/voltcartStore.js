@@ -428,32 +428,58 @@ let syncTimer = null;
 export function syncStoreToBackend(store) {
   if (syncTimer) clearTimeout(syncTimer);
   syncTimer = setTimeout(async () => {
+    const apiBase = getApiBaseUrl();
     try {
-      const apiBase = getApiBaseUrl();
-      await fetch(`${apiBase}/store/sync`, {
+      const res = await fetch(`${apiBase}/store/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ store }),
       });
-    } catch (_) {}
+      if (!res.ok && apiBase !== 'https://voltcart-m4ix.onrender.com/api') {
+        await fetch('https://voltcart-m4ix.onrender.com/api/store/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ store }),
+        });
+      }
+    } catch (_) {
+      try {
+        await fetch('https://voltcart-m4ix.onrender.com/api/store/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ store }),
+        });
+      } catch (__) {}
+    }
   }, 1200);
 }
 
 export async function syncStoreFromBackend() {
-  try {
-    const apiBase = getApiBaseUrl();
-    const res = await fetch(`${apiBase}/store/state`);
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (json.success && json.data) {
-      const remote = json.data;
-      if (Array.isArray(remote.products)) {
-        remote.products = remote.products.map(normalizeProduct);
+  const tryFetch = async (url) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const json = await res.json();
+      if (json.success && json.data) {
+        return json.data;
       }
-      saveStore(remote, false);
-      return remote;
+    } catch (_) {}
+    return null;
+  };
+
+  const apiBase = getApiBaseUrl();
+  let remote = await tryFetch(`${apiBase}/store/state`);
+  if (!remote && apiBase !== 'https://voltcart-m4ix.onrender.com/api') {
+    remote = await tryFetch('https://voltcart-m4ix.onrender.com/api/store/state');
+  }
+
+  if (remote) {
+    if (Array.isArray(remote.products)) {
+      remote.products = remote.products.map(normalizeProduct);
     }
-  } catch (_) {}
+    saveStore(remote, false);
+    return remote;
+  }
   return null;
 }
 

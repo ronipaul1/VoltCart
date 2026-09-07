@@ -5757,11 +5757,23 @@ function AdminSettings({ state }) {
     }
     try {
       const apiBase = getApiBaseUrl();
-      const res = await fetch(`${apiBase}/store/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ store: next }),
-      });
+      let res = null;
+      try {
+        res = await fetch(`${apiBase}/store/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ store: next }),
+        });
+      } catch (_) {}
+
+      if (!res || !res.ok) {
+        res = await fetch('https://voltcart-m4ix.onrender.com/api/store/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ store: next }),
+        });
+      }
+
       const data = await res.json();
       if (res.ok && data.success) {
         toast.success('Store Settings saved & synchronized to MySQL Database!');

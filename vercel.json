@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://voltcart-backend.onrender.com/api/:path*"
+      "destination": "https://voltcart-m4ix.onrender.com/api/:path*"
     }
   ]
 }
