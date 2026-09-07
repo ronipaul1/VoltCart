@@ -6,6 +6,9 @@ const { authenticate, adminOnly } = require('../middleware/auth.middleware');
 // Public webhook / storefront notification endpoint for order email dispatch
 router.post('/notify-placement', orderCtrl.notifyOrderPlacement);
 
+// Public live order tracking endpoint (by Order Number, AWB, or ID)
+router.get('/track/:identifier', orderCtrl.getPublicTracking);
+
 router.use(authenticate);
 router.post('/shipping/rates', orderCtrl.getShippingRates);
 router.post('/', orderCtrl.placeOrder);

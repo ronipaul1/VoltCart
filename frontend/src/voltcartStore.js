@@ -508,6 +508,22 @@ export function getStore() {
     if (store.settings.freeShippingThreshold === 25000) store.settings.freeShippingThreshold = initialStore.settings.freeShippingThreshold;
     if (store.settings.shippingOrigin?.phone === '+91 80 4567 8900') store.settings.shippingOrigin.phone = initialStore.settings.shippingOrigin.phone;
 
+    // Normalize and auto-assign valid tracking numbers and in-app tracking URLs
+    if (Array.isArray(store.orders)) {
+      store.orders = store.orders.map((o) => {
+        const trackingNum = o.trackingNumber || o.shipment?.trackingNumber || `VC${String(o.id || o.orderNumber || Date.now()).slice(-8)}IN`;
+        o.trackingNumber = trackingNum;
+        if (!o.shipment) o.shipment = {};
+        o.shipment.trackingNumber = trackingNum;
+        if (!o.shipment.trackingUrl || o.shipment.trackingUrl.includes('track.voltcart.com')) {
+          o.shipment.trackingUrl = `/track?awb=${trackingNum}`;
+        }
+        return o;
+      });
+    } else {
+      store.orders = [];
+    }
+
     return store;
   } catch (_) {
     saveStore(initialStore);
@@ -832,13 +848,14 @@ export function placeOrder({ user, items, address, paymentMethod, coupon, shippi
       cost: shippingCost,
       estimatedDays: '5–7 Business Days',
     },
+    trackingNumber: `VC${orderId.toString().slice(-8)}IN`,
     shipment: {
-      shipmentId: null,
+      shipmentId: `shp_${orderId.toString().slice(-8)}`,
       carrier: shippingMethod?.carrier || 'BlueDart Express (via Shippo)',
       service: shippingMethod?.service || 'Standard Delivery',
-      trackingNumber: null,
-      trackingUrl: null,
-      labelUrl: null,
+      trackingNumber: `VC${orderId.toString().slice(-8)}IN`,
+      trackingUrl: `/track?awb=VC${orderId.toString().slice(-8)}IN`,
+      labelUrl: `/admin/shipping-label/${orderId}`,
       packageWeight: Number(packageWeight.toFixed(2)),
       packageDimensions: '30 x 20 x 15 cm',
       isFragile: hasFragile,
@@ -1021,7 +1038,7 @@ export function generateOrderShippingLabel(orderId) {
   order.trackingNumber = trackingNum;
   if (!order.shipment) order.shipment = {};
   order.shipment.trackingNumber = trackingNum;
-  order.shipment.trackingUrl = `https://track.voltcart.com/?awb=${trackingNum}`;
+  order.shipment.trackingUrl = `/track?awb=${trackingNum}`;
   order.shipment.labelUrl = `/admin/shipping-label/${order.id}`;
   order.status = 'Ready for Shipment';
   saveStore(store);
@@ -1047,4 +1064,139 @@ export function updateShippingOrigin(originData) {
   store.settings.shippingOrigin = { ...store.settings.shippingOrigin, ...originData };
   saveStore(store);
   return store.settings.shippingOrigin;
+}
+
+export function generateTrackingTimeline(order) {
+  if (!order) return [];
+
+  const createdTime = order.createdAt ? new Date(order.createdAt).getTime() : Date.now();
+  const trackingNum = order.trackingNumber || order.shipment?.trackingNumber || `VC${String(order.id).slice(-8)}IN`;
+  const carrier = order.shippingMethod?.carrier || order.shipment?.carrier || 'BlueDart Express (via Shippo)';
+  const originCity = order.settings?.shippingOrigin?.city || 'Bengaluru';
+  const destCity = typeof order.address === 'string'
+    ? (order.address.split(',')[order.address.split(',').length - 3] || 'Destination Hub').trim()
+    : (order.address?.city || 'Destination Hub');
+
+  // Stages:
+  // 0: Order Confirmed
+  // 1: Processing
+  // 2: Ready for Shipment / Label Generated
+  // 3: Dispatched / Shipped
+  // 4: In Transit
+  // 5: Out for Delivery
+  // 6: Delivered
+  // -1: Cancelled
+  let currentStage = 0;
+  if (order.status === 'Cancelled' || order.status === 'Returned') {
+    currentStage = -1;
+  } else if (order.status === 'Delivered' || order.shipmentStatus === 'Delivered') {
+    currentStage = 6;
+  } else if (order.shipmentStatus === 'Out for Delivery') {
+    currentStage = 5;
+  } else if (order.shipmentStatus === 'In Transit' || order.shipmentStatus === 'Picked Up') {
+    currentStage = 4;
+  } else if (order.status === 'Shipped') {
+    currentStage = 3;
+  } else if (order.status === 'Ready for Shipment' || order.shipmentStatus === 'Label Generated') {
+    currentStage = 2;
+  } else if (order.status === 'Processing' || order.shipmentStatus === 'Shipment Created') {
+    currentStage = 1;
+  }
+
+  const events = [];
+
+  // Stage 0: Placed
+  events.push({
+    stage: 0,
+    title: 'Order Confirmed',
+    description: `Order ${order.orderNumber} placed & verified. Payment: ${order.paymentMethod} (${order.paymentStatus}).`,
+    location: `${originCity} Central Fulfillment Center`,
+    timestamp: new Date(createdTime).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+    completed: true,
+  });
+
+  // Stage 1: Processing
+  if (currentStage >= 1) {
+    events.push({
+      stage: 1,
+      title: 'Packaging & Quality Inspection',
+      description: 'Items picked from inventory, electronics security verification passed, sealed with tamper-proof tape.',
+      location: `${originCity} Warehouse Unit 4`,
+      timestamp: new Date(createdTime + 2 * 3600000).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      completed: true,
+    });
+  }
+
+  // Stage 2: Label Generated
+  if (currentStage >= 2) {
+    events.push({
+      stage: 2,
+      title: 'Shipping Label Generated & AWB Assigned',
+      description: `Official Shippo carrier label created. Air Waybill (AWB): ${trackingNum}. Package ready for courier pickup.`,
+      location: `${originCity} Logistics Bay`,
+      timestamp: new Date(createdTime + 5 * 3600000).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      completed: true,
+    });
+  }
+
+  // Stage 3: Shipped
+  if (currentStage >= 3) {
+    events.push({
+      stage: 3,
+      title: 'Dispatched from Fulfillment Hub',
+      description: `Package picked up by ${carrier}. In transit to primary regional sorting facility.`,
+      location: `${originCity} Air Freight Hub`,
+      timestamp: new Date(createdTime + 12 * 3600000).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      completed: true,
+    });
+  }
+
+  // Stage 4: In Transit
+  if (currentStage >= 4) {
+    events.push({
+      stage: 4,
+      title: 'In Transit — Transferred to Destination Hub',
+      description: `Consignment arrived at ${destCity} sorting facility. Barcode scanned & verified.`,
+      location: `${destCity} Central Sorting Hub`,
+      timestamp: new Date(createdTime + 28 * 3600000).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      completed: true,
+    });
+  }
+
+  // Stage 5: Out for Delivery
+  if (currentStage >= 5) {
+    events.push({
+      stage: 5,
+      title: 'Out for Delivery',
+      description: 'Package assigned to courier delivery agent. Contact will be made prior to delivery. Keep OTP handy.',
+      location: `${destCity} Local Delivery Hub`,
+      timestamp: new Date(createdTime + 44 * 3600000).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      completed: true,
+    });
+  }
+
+  // Stage 6: Delivered
+  if (currentStage >= 6) {
+    events.push({
+      stage: 6,
+      title: 'Delivered Successfully',
+      description: 'Package delivered to customer with electronic signature verification. Thank you for choosing VoltCart!',
+      location: order.address?.city || destCity,
+      timestamp: new Date(createdTime + 52 * 3600000).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      completed: true,
+    });
+  }
+
+  if (currentStage === -1) {
+    events.push({
+      stage: -1,
+      title: 'Order Cancelled',
+      description: 'This order shipment was cancelled and the package was returned to inventory.',
+      location: 'VoltCart Operations',
+      timestamp: new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      completed: true,
+    });
+  }
+
+  return events.reverse(); // Newest first
 }

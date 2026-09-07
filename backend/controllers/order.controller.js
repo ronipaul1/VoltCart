@@ -940,3 +940,103 @@ exports.notifyOrderPlacement = async (req, res) => {
   }
 };
 
+exports.getPublicTracking = async (req, res) => {
+  try {
+    const rawId = String(req.params.identifier || '').trim();
+    if (!rawId) {
+      return res.status(400).json({ success: false, message: 'Order number or tracking number is required.' });
+    }
+
+    const query = rawId.toLowerCase();
+
+    // 1. Try checking store_sync table (where storefront orders are synced)
+    try {
+      const [rows] = await db.execute('SELECT data FROM store_sync WHERE id = 1');
+      if (rows.length && rows[0].data) {
+        const storeData = JSON.parse(rows[0].data);
+        if (Array.isArray(storeData.orders)) {
+          const match = storeData.orders.find((o) => {
+            const num = String(o.orderNumber || '').toLowerCase();
+            const awb = String(o.trackingNumber || o.shipment?.trackingNumber || '').toLowerCase();
+            const id = String(o.id || '').toLowerCase();
+            return num === query || awb === query || id === query;
+          });
+
+          if (match) {
+            return res.json({
+              success: true,
+              source: 'store_sync',
+              data: {
+                id: match.id,
+                orderNumber: match.orderNumber,
+                trackingNumber: match.trackingNumber || match.shipment?.trackingNumber || `VC${String(match.id).slice(-8)}IN`,
+                carrier: match.shippingMethod?.carrier || match.shipment?.carrier || 'BlueDart Express (via Shippo)',
+                service: match.shippingMethod?.service || match.shipment?.service || 'Standard Delivery',
+                status: match.status,
+                shipmentStatus: match.shipmentStatus || 'Processing',
+                estimatedDelivery: match.shippingMethod?.estimatedDays || '3–5 Business Days',
+                createdAt: match.createdAt,
+                customer: match.customer,
+                address: match.address,
+                items: match.items || [],
+                total: match.total,
+                packageWeight: match.shipment?.packageWeight || 1.2,
+                packageDimensions: match.shipment?.packageDimensions || '30 x 20 x 15 cm',
+                isFragile: match.items?.some((i) => i.isFragile) || true,
+              },
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[Public Tracking] store_sync query warning:', e.message);
+    }
+
+    // 2. Try querying orders table in relational MySQL
+    try {
+      const [orderRows] = await db.execute(`
+        SELECT o.*, u.name as customer_name, a.city, a.state, a.pincode, a.country
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        LEFT JOIN addresses a ON o.address_id = a.id
+        WHERE LOWER(o.order_number) = ? OR LOWER(o.tracking_number) = ? OR o.id = ?
+      `, [query, query, isNaN(Number(query)) ? 0 : Number(query)]);
+
+      if (orderRows.length) {
+        const o = orderRows[0];
+        const [items] = await db.execute('SELECT product_name as name, quantity, unit_price as price FROM order_items WHERE order_id = ?', [o.id]);
+        const [trackingEvents] = await db.execute('SELECT status, description, location, created_at FROM order_tracking WHERE order_id = ? ORDER BY created_at ASC', [o.id]);
+
+        return res.json({
+          success: true,
+          source: 'orders_table',
+          data: {
+            id: o.id,
+            orderNumber: o.order_number,
+            trackingNumber: o.tracking_number || `VC${String(o.id).slice(-8)}IN`,
+            carrier: o.shippo_tracking_carrier || o.shipping_carrier || 'BlueDart Express (via Shippo)',
+            service: o.shippo_service_level || 'Standard Delivery',
+            status: o.order_status,
+            shipmentStatus: o.shippo_tracking_status || o.order_status,
+            estimatedDelivery: o.estimated_delivery,
+            createdAt: o.created_at,
+            customer: o.customer_name,
+            address: [o.city, o.state, o.pincode].filter(Boolean).join(', '),
+            items,
+            total: o.total_amount,
+            events: trackingEvents,
+          },
+        });
+      }
+    } catch (e) {
+      console.warn('[Public Tracking] relational orders query warning:', e.message);
+    }
+
+    return res.status(404).json({ success: false, message: `No active shipment found matching "${rawId}".` });
+  } catch (error) {
+    console.error('[Public Tracking] Error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+

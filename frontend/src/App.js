@@ -12,6 +12,8 @@ import {
   CheckCircleIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  ClipboardDocumentCheckIcon,
+  ClockIcon,
   Cog6ToothIcon,
   ComputerDesktopIcon,
   CpuChipIcon,
@@ -25,6 +27,7 @@ import {
   FireIcon,
   HeartIcon,
   MagnifyingGlassIcon,
+  MapPinIcon,
   MoonIcon,
   PrinterIcon,
   ShoppingCartIcon,
@@ -55,6 +58,7 @@ import {
   isCategoryActive,
   generateInvoiceNumber,
   generateOrderShippingLabel,
+  generateTrackingTimeline,
   getEffectiveTheme,
   getNotificationPrefs,
   getApiBaseUrl,
@@ -343,9 +347,15 @@ function Shell({ children, state }) {
         <div className="border-b border-slate-100 bg-slate-50 px-4 py-1.5 text-xs text-slate-600">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-5 gap-y-1 md:justify-between">
             <span>Free express delivery above {formatCurrency(state?.store?.settings?.freeShippingThreshold ?? 25000)}</span>
-            <span>Genuine products & warranty</span>
-            <span>Secure Razorpay payments</span>
-            <span>Support: {state?.store?.settings?.phone || '+91 80 4567 8900'}</span>
+            <div className="flex items-center gap-4">
+              <Link to="/track" className="inline-flex items-center gap-1 font-bold text-cyan-700 hover:text-cyan-800 hover:underline">
+                <TruckIcon className="h-3.5 w-3.5 text-cyan-600" />
+                <span>Track Order</span>
+              </Link>
+              <span>Genuine products & warranty</span>
+              <span>Secure Razorpay payments</span>
+              <span>Support: {state?.store?.settings?.phone || '+91 80 4567 8900'}</span>
+            </div>
           </div>
         </div>
 
@@ -384,6 +394,7 @@ function Shell({ children, state }) {
                 <div className="absolute right-0 hidden w-52 rounded-lg border border-slate-200 bg-white p-2 shadow-xl group-focus-within:block group-hover:block z-50">
                   <Link className="menu-link" to="/account">Account</Link>
                   <Link className="menu-link" to="/orders">Orders</Link>
+                  <Link className="menu-link" to="/track">Track Order</Link>
                   <Link className="menu-link" to="/wishlist">Wishlist</Link>
                   {state.user.role === 'admin' && <Link className="menu-link text-cyan-700 font-semibold" to="/admin/dashboard">Admin Dashboard</Link>}
                   <button className="menu-link w-full text-left text-red-600" onClick={logout}>Logout</button>
@@ -756,6 +767,7 @@ function Shell({ children, state }) {
                     <>
                       <Link to="/account" onClick={() => setOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50">👤 My Account</Link>
                       <Link to="/orders" onClick={() => setOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50">📦 My Orders</Link>
+                      <Link to="/track" onClick={() => setOpen(false)} className="block px-3 py-2 rounded-lg text-sm font-semibold text-cyan-700 hover:bg-cyan-50">🚚 Live Order Tracking</Link>
                       <Link to="/wishlist" onClick={() => setOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50">❤️ Wishlist ({state.wishlist.length})</Link>
                       {state.user.role === 'admin' && (
                         <Link to="/admin/dashboard" onClick={() => setOpen(false)} className="block px-3 py-2 rounded-lg text-sm font-semibold text-purple-700 hover:bg-purple-50">⚙️ Admin Dashboard</Link>
@@ -766,6 +778,7 @@ function Shell({ children, state }) {
                     <>
                       <Link to="/login" onClick={() => setOpen(false)} className="block px-3 py-2 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-50">🔐 Login</Link>
                       <Link to="/register" onClick={() => setOpen(false)} className="block px-3 py-2 rounded-lg text-sm font-semibold text-cyan-700 hover:bg-cyan-50">📝 Register</Link>
+                      <Link to="/track" onClick={() => setOpen(false)} className="block px-3 py-2 rounded-lg text-sm font-semibold text-cyan-700 hover:bg-cyan-50">🚚 Track Order (Guest / Live)</Link>
                     </>
                   )}
                   <div className="pt-3 border-t border-slate-100">
@@ -832,7 +845,24 @@ function Footer({ settings }) {
 }
 
 function FooterLinks({ title, links }) {
-  return <div><h4 className="font-bold">{title}</h4><div className="mt-3 grid gap-2 text-sm text-slate-300">{links.map((l) => <Link key={l} to={`/shop?search=${l}`}>{l}</Link>)}</div></div>;
+  return (
+    <div>
+      <h4 className="font-bold">{title}</h4>
+      <div className="mt-3 grid gap-2 text-sm text-slate-300">
+        {links.map((l) => {
+          let to = `/shop?search=${encodeURIComponent(l)}`;
+          if (l === 'Shippo Live Tracking' || l === 'Live Tracking' || l === 'Track Order') to = '/track';
+          else if (l === 'Support Helpline') to = '/contact';
+          else if (l === 'Tax Invoices') to = '/orders';
+          return (
+            <Link key={l} to={to} className="hover:text-cyan-300 transition-colors">
+              {l}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
@@ -1978,6 +2008,11 @@ function OrderSuccess({ state }) {
               <p className="text-slate-600 mt-1 whitespace-pre-line">{order.address}</p>
               <p className="text-slate-500 mt-2">Shipping Carrier: <strong className="text-slate-700">{order.shippingMethod?.carrier || 'Shippo Express'}</strong></p>
               <p className="text-slate-500">Service: <strong className="text-slate-700">{order.shippingMethod?.service || 'Standard Delivery'}</strong></p>
+              {order.trackingNumber && (
+                <p className="text-slate-500 mt-1">
+                  Air Waybill (AWB): <strong className="font-mono text-cyan-700">{order.trackingNumber}</strong>
+                </p>
+              )}
             </div>
 
             <div className="rounded border border-slate-100 bg-slate-50 p-4 text-xs">
@@ -2021,13 +2056,19 @@ function OrderSuccess({ state }) {
           </div>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link className="btn-primary py-2 px-5 text-sm" to={`/invoice/${order.id}`}>
+            <Link
+              className="btn-primary py-2.5 px-6 text-sm inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold shadow hover:shadow-md transition"
+              to={`/track?awb=${order.trackingNumber || order.orderNumber}`}
+            >
+              <TruckIcon className="h-4 w-4" /> Track Live Shipment
+            </Link>
+            <Link className="btn-secondary py-2.5 px-5 text-sm" to={`/invoice/${order.id}`}>
               View / Download Tax Invoice
             </Link>
-            <Link className="btn-secondary py-2 px-5 text-sm" to="/orders">
+            <Link className="btn-secondary py-2.5 px-5 text-sm" to="/orders">
               View My Orders
             </Link>
-            <Link className="btn-secondary py-2 px-5 text-sm" to="/shop">
+            <Link className="btn-secondary py-2.5 px-5 text-sm" to="/shop">
               Continue Shopping
             </Link>
           </div>
@@ -3079,14 +3120,12 @@ function AccountOrderDetail({ state }) {
                 <p className="text-slate-500 mt-0.5">Tracking Number (AWB): <strong className="font-mono text-slate-900">{order.trackingNumber}</strong></p>
                 <p className="text-slate-500 mt-0.5">Service: {order.shippingMethod?.service || 'Standard Air'}</p>
               </div>
-              <a
-                href={order.shipment?.trackingUrl || `https://track.voltcart.com/?awb=${order.trackingNumber}`}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-primary py-1.5 px-4 text-xs"
+              <Link
+                to={`/track?awb=${order.trackingNumber || order.orderNumber}`}
+                className="btn-primary py-1.5 px-4 text-xs inline-flex items-center gap-1.5 font-bold"
               >
-                Track Shipment ↗
-              </a>
+                <TruckIcon className="h-4 w-4" /> Live Tracking ↗
+              </Link>
             </div>
           ) : (
             <p className="text-slate-600">Your order is being prepared for shipment. Once dispatched through our Shippo warehouse integration, your live tracking number will appear here.</p>
@@ -3175,6 +3214,533 @@ function AccountOrderDetail({ state }) {
         </div>
       </div>
     </AccountLayout>
+  );
+}
+
+// ─── LIVE SHIPMENT TRACKING (Public & In-App Customer) ────────────────────────
+
+const TRACKING_STEPS = [
+  { stage: 0, label: 'Confirmed' },
+  { stage: 1, label: 'Processing' },
+  { stage: 2, label: 'Label Created' },
+  { stage: 3, label: 'Dispatched' },
+  { stage: 4, label: 'In Transit' },
+  { stage: 5, label: 'Out for Delivery' },
+  { stage: 6, label: 'Delivered' },
+];
+
+function getOrderTrackingStage(order) {
+  if (!order) return 0;
+  if (order.status === 'Cancelled' || order.status === 'Returned') return -1;
+  if (order.status === 'Delivered' || order.shipmentStatus === 'Delivered') return 6;
+  if (order.shipmentStatus === 'Out for Delivery') return 5;
+  if (order.shipmentStatus === 'In Transit' || order.shipmentStatus === 'Picked Up') return 4;
+  if (order.status === 'Shipped') return 3;
+  if (order.status === 'Ready for Shipment' || order.shipmentStatus === 'Label Generated') return 2;
+  if (order.status === 'Processing' || order.shipmentStatus === 'Shipment Created') return 1;
+  return 0;
+}
+
+function LiveTracking({ state }) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryParam = (searchParams.get('awb') || searchParams.get('order') || searchParams.get('q') || '').trim();
+  const [inputVal, setInputVal] = useState(queryParam);
+  const [activeQuery, setActiveQuery] = useState(queryParam);
+  const [remoteOrder, setRemoteOrder] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const q = (searchParams.get('awb') || searchParams.get('order') || searchParams.get('q') || '').trim();
+    setInputVal(q);
+    setActiveQuery(q);
+  }, [searchParams]);
+
+  // Try finding order in local store first
+  const localOrder = useMemo(() => {
+    if (!activeQuery || !state?.store?.orders) return null;
+    const clean = activeQuery.toLowerCase();
+    return state.store.orders.find((o) => {
+      const matchAwb = o.trackingNumber && o.trackingNumber.toLowerCase() === clean;
+      const matchOrderNum = o.orderNumber && o.orderNumber.toLowerCase() === clean;
+      const matchId = String(o.id).toLowerCase() === clean;
+      const matchShipAwb = o.shipment?.trackingNumber && o.shipment.trackingNumber.toLowerCase() === clean;
+      return matchAwb || matchOrderNum || matchId || matchShipAwb;
+    }) || null;
+  }, [activeQuery, state?.store?.orders]);
+
+  // Fallback to public backend endpoint if not found in local store
+  useEffect(() => {
+    if (!activeQuery) {
+      setRemoteOrder(null);
+      setError(null);
+      return;
+    }
+
+    if (localOrder) {
+      setRemoteOrder(null);
+      setError(null);
+      return;
+    }
+
+    let isSubscribed = true;
+    setLoading(true);
+    setError(null);
+
+    fetch(`${getApiBaseUrl()}/api/orders/track/${encodeURIComponent(activeQuery)}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Shipment not found');
+        return res.json();
+      })
+      .then((data) => {
+        if (isSubscribed) {
+          if (data && data.order) {
+            setRemoteOrder(data.order);
+            setError(null);
+          } else {
+            setError(`No shipment found matching "${activeQuery}".`);
+          }
+        }
+      })
+      .catch(() => {
+        if (isSubscribed) {
+          setError(`No shipment found for "${activeQuery}". Please double check your Air Waybill (AWB) or Order ID.`);
+          setRemoteOrder(null);
+        }
+      })
+      .finally(() => {
+        if (isSubscribed) setLoading(false);
+      });
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [activeQuery, localOrder]);
+
+  const matchedOrder = localOrder || remoteOrder;
+  const currentStage = getOrderTrackingStage(matchedOrder);
+  const timeline = useMemo(() => {
+    return matchedOrder ? generateTrackingTimeline(matchedOrder) : [];
+  }, [matchedOrder]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const clean = inputVal.trim();
+    if (!clean) return;
+    setSearchParams({ awb: clean });
+  };
+
+  const copyAwb = (awb) => {
+    if (!awb) return;
+    navigator.clipboard.writeText(awb);
+    setCopied(true);
+    toast.success('AWB copied to clipboard!');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // User's recent orders for 1-click tracking
+  const userOrders = useMemo(() => {
+    if (!state.user || !state.store?.orders) return [];
+    return state.store.orders
+      .filter((o) => o.userId === state.user.id || (state.user.email && o.customerEmail === state.user.email))
+      .slice(0, 5);
+  }, [state.user, state.store?.orders]);
+
+  // Demo sample order AWB (if no order is searched yet)
+  const sampleAwb = state?.store?.orders?.[0]?.trackingNumber || 'VC83920194IN';
+
+  const carrierName = matchedOrder?.shippingMethod?.carrier || matchedOrder?.shipment?.carrier || 'Shippo Express Logistics';
+  const trackingNumber = matchedOrder?.trackingNumber || matchedOrder?.shipment?.trackingNumber || (matchedOrder ? `VC${String(matchedOrder.id).slice(-8)}IN` : '');
+  const estDeliveryDate = matchedOrder?.createdAt
+    ? new Date(new Date(matchedOrder.createdAt).getTime() + 4 * 24 * 3600000).toLocaleDateString('en-IN', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : 'Within 3-4 Business Days';
+
+  return (
+    <Shell state={state}>
+      <div className="min-h-[80vh] bg-slate-50/60 pb-16">
+        {/* Hero & Search Banner */}
+        <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-cyan-950 text-white py-10 px-4 shadow-inner">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 border border-cyan-500/30 px-3.5 py-1 text-xs font-bold text-cyan-300 mb-4 backdrop-blur-sm">
+              <TruckIcon className="h-4 w-4 text-cyan-400" />
+              <span>Shippo Warehouse & Carrier Tracking Integration</span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
+              Live Order & Shipment Tracking
+            </h1>
+            <p className="mt-2 text-sm text-slate-300 max-w-xl mx-auto">
+              Track your package across every checkpoint from VoltCart central fulfillment to your doorstep.
+            </p>
+
+            {/* Interactive Search Bar */}
+            <form onSubmit={handleSearch} className="mt-6 max-w-2xl mx-auto flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Enter Tracking AWB (e.g. VC12345678IN) or Order # (e.g. VC-100234)"
+                  value={inputVal}
+                  onChange={(e) => setInputVal(e.target.value)}
+                  className="w-full h-12 pl-11 pr-10 rounded-xl bg-white text-slate-900 placeholder:text-slate-400 font-medium text-sm border-2 border-transparent focus:border-cyan-400 focus:outline-none shadow-lg"
+                />
+                <MagnifyingGlassIcon className="absolute left-3.5 top-3.5 h-5 w-5 text-slate-400" />
+                {inputVal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputVal('');
+                      setActiveQuery('');
+                      setSearchParams({});
+                    }}
+                    className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 p-0.5"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="h-12 px-7 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-sm shadow-lg hover:shadow-cyan-500/25 transition duration-150 shrink-0 flex items-center justify-center gap-2"
+              >
+                <TruckIcon className="h-5 w-5" /> Track Package
+              </button>
+            </form>
+
+            {/* Quick 1-Click Order Tracking Chips */}
+            {userOrders.length > 0 ? (
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs">
+                <span className="text-slate-400 font-medium">Your Recent Orders:</span>
+                {userOrders.map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => setSearchParams({ awb: o.trackingNumber || o.orderNumber })}
+                    className="rounded-lg bg-slate-800/80 hover:bg-cyan-900/60 border border-slate-700 hover:border-cyan-500/50 px-2.5 py-1 text-slate-200 font-medium transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span className="font-mono text-cyan-300">{o.orderNumber}</span>
+                    <span className="text-slate-400">({o.status})</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-400">
+                <span>Looking for a demo?</span>
+                <button
+                  type="button"
+                  onClick={() => setSearchParams({ awb: sampleAwb })}
+                  className="font-mono text-cyan-300 hover:underline font-bold cursor-pointer"
+                >
+                  Try tracking {sampleAwb} →
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="max-w-5xl mx-auto px-4 mt-8">
+          {loading && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent mb-3" />
+              <p className="font-bold text-slate-700 text-sm">Querying Shippo carrier tracking database...</p>
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-8 text-center shadow-sm">
+              <ExclamationTriangleIcon className="h-10 w-10 text-rose-500 mx-auto mb-2" />
+              <h2 className="text-lg font-black text-rose-900">Shipment Not Located</h2>
+              <p className="mt-1 text-xs text-rose-700 max-w-md mx-auto">{error}</p>
+              <div className="mt-4 flex justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSearchParams({ awb: sampleAwb })}
+                  className="btn-primary py-2 px-4 text-xs font-bold"
+                >
+                  Try Demo Shipment ({sampleAwb})
+                </button>
+                <Link to="/contact" className="btn-secondary py-2 px-4 text-xs">
+                  Contact Support
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && !matchedOrder && !activeQuery && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm max-w-2xl mx-auto">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600 mb-4">
+                <TruckIcon className="h-9 w-9" />
+              </div>
+              <h2 className="text-xl font-black text-slate-900">Ready to Track Your Order</h2>
+              <p className="mt-2 text-xs text-slate-500 leading-relaxed max-w-md mx-auto">
+                Enter your Air Waybill (AWB) number or Order ID in the search box above to view real-time transit status, milestone checkpoints, and carrier dispatch details.
+              </p>
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs">
+                  <div className="font-bold text-slate-800">1. Instant AWBs</div>
+                  <p className="text-slate-500 text-[11px] mt-1">Generated automatically upon checkout for full visibility.</p>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs">
+                  <div className="font-bold text-slate-800">2. Live Checkpoints</div>
+                  <p className="text-slate-500 text-[11px] mt-1">Scans updated from hub dispatch through last-mile delivery.</p>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs">
+                  <div className="font-bold text-slate-800">3. Verified Carriers</div>
+                  <p className="text-slate-500 text-[11px] mt-1">Integrated via Shippo logistics infrastructure.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Rendered Order Tracking Card */}
+          {!loading && !error && matchedOrder && (
+            <div className="space-y-6">
+              {/* Header Status Bar */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-cyan-100 text-cyan-800 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider">
+                        {carrierName}
+                      </span>
+                      <span className="text-xs text-slate-400">·</span>
+                      <span className="text-xs text-slate-500">Shippo Carrier Verified</span>
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-slate-500">AWB Tracking Number:</span>
+                      <span className="font-mono font-black text-slate-900 text-base">{trackingNumber}</span>
+                      <button
+                        type="button"
+                        onClick={() => copyAwb(trackingNumber)}
+                        className="rounded p-1 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition cursor-pointer"
+                        title="Copy AWB"
+                      >
+                        <ClipboardDocumentCheckIcon className="h-4 w-4" />
+                      </button>
+                      {copied && <span className="text-[11px] text-emerald-600 font-bold">Copied!</span>}
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-xs text-slate-400 font-medium">Current Status</div>
+                    <div className="text-xl font-black text-slate-900 mt-0.5">
+                      {matchedOrder.status === 'Cancelled' ? (
+                        <span className="text-rose-600">Cancelled</span>
+                      ) : matchedOrder.status === 'Delivered' || matchedOrder.shipmentStatus === 'Delivered' ? (
+                        <span className="text-emerald-600">Delivered</span>
+                      ) : matchedOrder.shipmentStatus || matchedOrder.status}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      ETA: <strong className="text-cyan-800">{estDeliveryDate}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Key Meta Grid */}
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <span className="text-slate-400 block font-medium">Order Reference</span>
+                    <strong className="text-slate-800 font-mono mt-0.5 block">{matchedOrder.orderNumber}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-medium">Service Level</span>
+                    <strong className="text-slate-800 mt-0.5 block">{matchedOrder.shippingMethod?.service || 'Express Air Courier'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-medium">Package Weight</span>
+                    <strong className="text-slate-800 mt-0.5 block">{matchedOrder.shipment?.packageWeight || '0.85'} kg</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-medium">Destination</span>
+                    <strong className="text-slate-800 mt-0.5 block truncate">
+                      {typeof matchedOrder.address === 'string'
+                        ? matchedOrder.address.split(',').slice(-3).join(', ')
+                        : `${matchedOrder.address?.city || 'India'}, ${matchedOrder.address?.postalCode || ''}`}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Visual Stepper */}
+                <div className="mt-8 pt-6 border-t border-slate-100">
+                  <div className="relative">
+                    {/* Connecting line */}
+                    <div className="absolute top-4 left-4 right-4 h-1 bg-slate-200 -translate-y-1/2 z-0 hidden sm:block">
+                      <div
+                        className="h-full bg-cyan-500 transition-all duration-500"
+                        style={{
+                          width: currentStage < 0 ? '0%' : `${(Math.max(0, currentStage) / 6) * 100}%`,
+                        }}
+                      />
+                    </div>
+
+                    {/* Step Icons */}
+                    <div className="grid grid-cols-2 sm:grid-cols-7 gap-3 relative z-10">
+                      {TRACKING_STEPS.map((step) => {
+                        const isDone = currentStage >= step.stage && currentStage >= 0;
+                        const isCurrent = currentStage === step.stage;
+
+                        return (
+                          <div key={step.stage} className="flex flex-col items-center text-center">
+                            <div
+                              className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition duration-300 shadow-sm ${
+                                isDone
+                                  ? 'bg-cyan-500 text-white ring-4 ring-cyan-100'
+                                  : 'bg-white border-2 border-slate-300 text-slate-400'
+                              } ${isCurrent ? 'ring-cyan-300 animate-pulse' : ''}`}
+                            >
+                              {isDone ? '✓' : step.stage + 1}
+                            </div>
+                            <span
+                              className={`mt-2 text-[11px] leading-tight ${
+                                isCurrent
+                                  ? 'font-black text-cyan-800'
+                                  : isDone
+                                  ? 'font-bold text-slate-800'
+                                  : 'font-medium text-slate-400'
+                              }`}
+                            >
+                              {step.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Two Column Layout: Timeline Checkpoints & Package Info */}
+              <div className="grid gap-6 lg:grid-cols-3">
+                {/* Left: Chronological Checkpoints Log (2 Columns) */}
+                <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-6">
+                    <div className="flex items-center gap-2">
+                      <ClockIcon className="h-5 w-5 text-cyan-600" />
+                      <h2 className="text-base font-black text-slate-900">Carrier Checkpoint History</h2>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                      Live Scans Active
+                    </span>
+                  </div>
+
+                  <div className="relative pl-6 space-y-8 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                    {timeline.map((event, idx) => {
+                      const isLatest = idx === 0;
+                      return (
+                        <div key={idx} className="relative group">
+                          {/* Dot indicator */}
+                          <div
+                            className={`absolute -left-6 top-1 h-4 w-4 rounded-full border-2 transition ${
+                              isLatest
+                                ? 'border-cyan-500 bg-cyan-500 ring-4 ring-cyan-100'
+                                : 'border-slate-300 bg-white group-hover:border-cyan-400'
+                            }`}
+                          />
+
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-black text-slate-900">{event.title}</span>
+                              {isLatest && (
+                                <span className="rounded bg-cyan-100 px-1.5 py-0.5 text-[10px] font-black uppercase text-cyan-800">
+                                  Current Status
+                                </span>
+                              )}
+                              <span className="text-[11px] text-slate-400 ml-auto font-mono">{event.timestamp}</span>
+                            </div>
+
+                            <p className="mt-1 text-xs text-slate-600 leading-relaxed">{event.description}</p>
+
+                            <div className="mt-2 flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                              <MapPinIcon className="h-3.5 w-3.5 text-slate-400" />
+                              <span>{event.location}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Right: Package Contents & Help */}
+                <div className="space-y-5">
+                  {/* Items in Parcel */}
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">
+                      Package Items ({matchedOrder.items?.length || 0})
+                    </h3>
+                    <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto pr-1">
+                      {matchedOrder.items?.map((item, i) => {
+                        const product = state.store.products.find((p) => p.id === item.productId);
+                        return (
+                          <div key={i} className="py-2.5 flex items-center gap-3">
+                            <div className="h-12 w-12 shrink-0 rounded-lg border border-slate-200 bg-slate-50 p-1 flex items-center justify-center overflow-hidden">
+                              <img
+                                src={getProductImage(product, 0)}
+                                alt={item.name}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1 text-xs">
+                              <p className="font-bold text-slate-800 truncate">{item.name}</p>
+                              <p className="text-slate-400 text-[11px]">Qty: {item.quantity} · {formatCurrency(item.price)}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Destination Address Card */}
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-xs">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">
+                      Delivery Address
+                    </h3>
+                    <p className="font-bold text-slate-900">{matchedOrder.customer}</p>
+                    <p className="text-slate-600 mt-1 whitespace-pre-line leading-relaxed">{matchedOrder.address}</p>
+                  </div>
+
+                  {/* Action Links */}
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-xs space-y-2">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">
+                      Quick Actions
+                    </h3>
+                    <Link
+                      to={`/invoice/${matchedOrder.id}`}
+                      className="w-full flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:border-cyan-500 text-slate-700 hover:text-cyan-700 font-semibold transition"
+                    >
+                      <span>Download Tax Invoice</span>
+                      <span>→</span>
+                    </Link>
+                    {state.user && (
+                      <Link
+                        to={`/orders/${matchedOrder.id}`}
+                        className="w-full flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:border-cyan-500 text-slate-700 hover:text-cyan-700 font-semibold transition"
+                      >
+                        <span>View in Account Orders</span>
+                        <span>→</span>
+                      </Link>
+                    )}
+                    <Link
+                      to="/contact"
+                      className="w-full flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:border-cyan-500 text-slate-700 hover:text-cyan-700 font-semibold transition"
+                    >
+                      <span>Contact Fulfillment Support</span>
+                      <span>→</span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </Shell>
   );
 }
 
@@ -5516,15 +6082,14 @@ function AdminOrderDetail({ state }) {
               </button>
             )}
             {order.trackingNumber && (
-              <a
-                href={order.shipment?.trackingUrl || `https://track.voltcart.com/?awb=${order.trackingNumber}`}
-                target="_blank"
-                rel="noreferrer"
-                className="admin-btn-secondary py-1.5 px-3.5 text-xs inline-flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300"
+              <Link
+                to={`/track?awb=${order.trackingNumber || order.orderNumber}`}
+                className="admin-btn-secondary py-1.5 px-3.5 text-xs inline-flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 font-bold"
               >
+                <TruckIcon className="h-4 w-4" />
                 <span>View Live Carrier Tracking</span>
                 <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-              </a>
+              </Link>
             )}
           </div>
         </div>
@@ -5986,6 +6551,8 @@ function AppRoutes() {
       <Route path="/wishlist" element={<AccountWishlist state={state} />} />
       <Route path="/checkout" element={<Checkout state={state} />} />
       <Route path="/order-success/:id" element={<OrderSuccess state={state} />} />
+      <Route path="/track" element={<LiveTracking state={state} />} />
+      <Route path="/tracking" element={<Navigate to="/track" replace />} />
       <Route path="/orders" element={<AccountOrders state={state} />} />
       <Route path="/orders/:id" element={<AccountOrderDetail state={state} />} />
       <Route path="/invoice/:id" element={<InvoiceView state={state} />} />
