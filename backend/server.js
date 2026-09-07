@@ -70,6 +70,7 @@ app.use('/api/coupons', require('./routes/coupon.routes'));
 app.use('/api/notifications', require('./routes/notification.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
 app.use('/api/addresses', require('./routes/address.routes'));
+app.use('/api/store', require('./routes/store.routes'));
 
 // ── Root Endpoint ────────────────────────────────────────────
 app.get('/', (req, res) => {

@@ -74,6 +74,7 @@ import {
   setDefaultAddress,
   setSession,
   subscribeStore,
+  syncStoreFromBackend,
   updateAddress,
   updateOrderFulfillment,
   updateProduct,
@@ -109,6 +110,11 @@ function useVoltCart() {
   const [wishlist, setWishlist] = useState(() => JSON.parse(localStorage.getItem(WISHLIST_KEY) || '[]'));
 
   useEffect(() => subscribeStore(setStore), []);
+  useEffect(() => {
+    syncStoreFromBackend().then((remote) => {
+      if (remote) setStore(remote);
+    });
+  }, []);
   useEffect(() => {
     const handler = () => setUser(getSession());
     window.addEventListener('voltcart-session-change', handler);

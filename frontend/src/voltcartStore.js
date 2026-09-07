@@ -130,6 +130,84 @@ export function mapExternalCategoryToVoltCart(externalCategory = '', title = '',
 
 // ─── Initial Curated Electronics Products ─────────────────────────────────────
 
+export const CURATED_PRODUCT_IMAGES = {
+  'iPhone 15 Pro Max': [
+    'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=900&q=80',
+  ],
+  'Galaxy S24 Ultra': [
+    'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=900&q=80',
+  ],
+  'MacBook Pro 14 M3': [
+    'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=80',
+  ],
+  'Dell XPS 15 OLED': [
+    'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=900&q=80',
+  ],
+  'iPad Pro 12.9 M2': [
+    'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1561154464-82e9adf32764?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=900&q=80',
+  ],
+  'Galaxy Tab S9 Ultra': [
+    'https://images.unsplash.com/photo-1589739900243-4b52cd9b104e?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1561154464-82e9adf32764?auto=format&fit=crop&w=900&q=80',
+  ],
+  'Sony WH-1000XM5': [
+    'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1484704849700-f032a568e944?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=900&q=80',
+  ],
+  'AirPods Pro 2': [
+    'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1588423771073-b8903fbb85b5?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?auto=format&fit=crop&w=900&q=80',
+  ],
+  'Canon EOS R6 Mark II': [
+    'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=900&q=80',
+  ],
+  'PlayStation 5 Slim': [
+    'https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&w=900&q=80',
+  ],
+  'Asus ROG Zephyrus G16': [
+    'https://images.unsplash.com/photo-1603302576837-37561b2e2302?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=900&q=80',
+  ],
+  'Apple Watch Ultra 2': [
+    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1510017803434-a899398421b3?auto=format&fit=crop&w=900&q=80',
+  ],
+  'Logitech MX Master 3S': [
+    'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=900&q=80',
+  ],
+  'Samsung 990 PRO 2TB NVMe SSD': [
+    'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1544652478-6653e09f18a2?auto=format&fit=crop&w=900&q=80',
+  ],
+  'Anker 737 GaN 140W Power Bank': [
+    'https://images.unsplash.com/photo-1609592424368-80e976db5833?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1625842268584-8f3296236761?auto=format&fit=crop&w=900&q=80',
+  ],
+};
+
 const initialProducts = [
   ['iPhone 15 Pro Max', 'Apple', 'Smartphones & Mobile', 159900, 149900, 28, 4.9, 1240, true],
   ['Galaxy S24 Ultra', 'Samsung', 'Smartphones & Mobile', 134999, 124999, 19, 4.8, 890, true],
@@ -147,10 +225,15 @@ const initialProducts = [
   ['Samsung 990 PRO 2TB NVMe SSD', 'Samsung', 'Networking & Storage', 21999, 17499, 45, 4.9, 610, false],
   ['Anker 737 GaN 140W Power Bank', 'Anker', 'Mobile Accessories', 14999, 11999, 50, 4.7, 430, false],
 ].map(([name, brand, category, originalPrice, price, stock, rating, reviews, featured], index) => {
+  const imgList = CURATED_PRODUCT_IMAGES[name] || [
+    'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=80',
+  ];
   const images = [
-    { url: `https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=80`, alt: `${name} Front View`, isPrimary: true },
-    { url: `https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=900&q=80`, alt: `${name} Angle View`, isPrimary: false },
-    { url: `https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=80`, alt: `${name} In Context`, isPrimary: false },
+    { url: imgList[0], alt: `${name} Front View`, isPrimary: true },
+    { url: imgList[1] || imgList[0], alt: `${name} Angle View`, isPrimary: false },
+    { url: imgList[2] || imgList[0], alt: `${name} In Context`, isPrimary: false },
   ];
 
   return {
@@ -261,6 +344,19 @@ export function normalizeProduct(product) {
     });
   }
 
+  // Auto-heal legacy generic phone images if product is a different category
+  if (
+    CURATED_PRODUCT_IMAGES[product.name] &&
+    rawImages.some((img) => (img.url || img).includes('photo-1511707171634-5f897ff02aa9')) &&
+    !product.name.includes('iPhone')
+  ) {
+    rawImages = CURATED_PRODUCT_IMAGES[product.name].map((url, i) => ({
+      url,
+      alt: `${product.name} Image ${i + 1}`,
+      isPrimary: i === 0,
+    }));
+  }
+
   // Ensure exactly one isPrimary
   if (!rawImages.some((i) => i.isPrimary)) {
     rawImages[0].isPrimary = true;
@@ -315,6 +411,49 @@ export function normalizeProduct(product) {
   };
 }
 
+export const getApiBaseUrl = () => {
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL.replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost:5000/api';
+  }
+  return '/api';
+};
+
+let syncTimer = null;
+export function syncStoreToBackend(store) {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    try {
+      const apiBase = getApiBaseUrl();
+      await fetch(`${apiBase}/store/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ store }),
+      });
+    } catch (_) {}
+  }, 1200);
+}
+
+export async function syncStoreFromBackend() {
+  try {
+    const apiBase = getApiBaseUrl();
+    const res = await fetch(`${apiBase}/store/state`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json.success && json.data) {
+      const remote = json.data;
+      if (Array.isArray(remote.products)) {
+        remote.products = remote.products.map(normalizeProduct);
+      }
+      saveStore(remote, false);
+      return remote;
+    }
+  } catch (_) {}
+  return null;
+}
+
 export function getStore() {
   const raw = localStorage.getItem(STORE_KEY);
   if (!raw) {
@@ -344,9 +483,12 @@ export function getStore() {
   }
 }
 
-export function saveStore(store) {
+export function saveStore(store, pushToBackend = true) {
   localStorage.setItem(STORE_KEY, JSON.stringify(store));
   window.dispatchEvent(new Event('voltcart-store-change'));
+  if (pushToBackend) {
+    syncStoreToBackend(store);
+  }
 }
 
 export function subscribeStore(callback) {
