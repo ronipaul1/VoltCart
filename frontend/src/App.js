@@ -1537,9 +1537,9 @@ function Checkout({ state }) {
     try {
       const apiBase = process.env.REACT_APP_API_URL
         ? process.env.REACT_APP_API_URL.replace(/\/$/, '')
-        : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        : (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
             ? 'http://localhost:5000/api'
-            : '/api');
+            : 'https://voltcart-backend.onrender.com/api');
 
       const url = `${apiBase}/orders/notify-placement`;
       await fetch(url, {
@@ -5789,6 +5789,9 @@ function AdminSettings({ state }) {
               <input type="number" className="admin-input mt-1.5 text-sm w-full p-2.5" value={settings.taxRate} onChange={(e) => setSettings({ ...settings, taxRate: Number(e.target.value) })} />
             </label>
           </div>
+          <button className="mt-4 admin-btn-primary py-2.5 px-6 font-bold text-xs" onClick={save}>
+            Save Store Settings
+          </button>
         </div>
 
         {/* Shipping Origin Warehouse (Used for Shippo & Shipping Labels) */}
